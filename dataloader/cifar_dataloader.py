@@ -2,7 +2,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
-def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=False):
+def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=False,enhanced_augmentation=False):
     """
     Creates and returns CIFAR-10 train and test DataLoaders.
 
@@ -23,23 +23,39 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
     num_classes = 10
 
     if for_vit:
-        # Transformations for Vision Transformer (typically expects 224x224 images)
+        # Transformations for Vision Transformer (expects 224x224 images)
         image_size = 224
-        transform_train_list = [
-            transforms.Resize(image_size, antialias=True), # Resize to ViT's expected input size
-            transforms.RandomCrop(image_size, padding=int(image_size*0.125), pad_if_needed=True), # e.g., 28 for 224
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(cifar10_mean, cifar10_std),
-        ]
+        if enhanced_augmentation:
+            #some extra augmentations
+            transform_train_list = [
+                transforms.Resize(image_size, antialias=True),  # Resize
+                transforms.RandomCrop(image_size, padding=int(image_size*0.125), pad_if_needed=True), 
+                transforms.RandomHorizontalFlip(p=0.5),  
+                transforms.RandomRotation(degrees=15),  
+                transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Color adjustments
+                transforms.RandomAffine(degrees=0, translate=(0.1, 0.1), scale=(0.9, 1.1)),  # Random affine: translation and scaling
+                transforms.ToTensor(),
+                transforms.Normalize(cifar10_mean, cifar10_std),
+                transforms.RandomErasing(p=0.5, scale=(0.02, 0.2), ratio=(0.3, 3.3)),  # Random erasing, 50% chance
+            ]
+        else:
+            # Standard transforms for ViT without enhanced augmentation
+            transform_train_list = [
+                transforms.Resize(image_size, antialias=True),  # Resize 
+                transforms.RandomCrop(image_size, padding=int(image_size*0.125), pad_if_needed=True),  # Random crop
+                transforms.RandomHorizontalFlip(p=0.5), 
+                transforms.ToTensor(),
+                transforms.Normalize(cifar10_mean, cifar10_std),
+            ]
         transform_test_list = [
             transforms.Resize(image_size, antialias=True),
             transforms.ToTensor(),
             transforms.Normalize(cifar10_mean, cifar10_std),
         ]
         image_dims = (3, image_size, image_size)
+    
     else:
-        # Standard transformations for CNNs like ResNet on CIFAR-10 (32x32)
+        # Standard transforms for CNNs like ResNet (32x32)
         image_size = 32
         transform_train_list = [
             transforms.RandomCrop(image_size, padding=4, pad_if_needed=True),
@@ -52,6 +68,7 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
             transforms.Normalize(cifar10_mean, cifar10_std),
         ]
         image_dims = (3, image_size, image_size)
+
 
     transform_train = transforms.Compose(transform_train_list)
     transform_test = transforms.Compose(transform_test_list)
@@ -68,6 +85,7 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True, persistent_workers=num_workers > 0)
 
+
     try:
         testset = torchvision.datasets.CIFAR10(
             root=data_root, train=False, download=True, transform=transform_test)
@@ -81,7 +99,7 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
     
     return trainloader, testloader, num_classes, image_dims
 
-def get_dataloader(dataset_name, batch_size, num_workers, data_root='./data', for_vit=False):
+def get_dataloader(dataset_name, batch_size, num_workers, data_root='./data', for_vit=False,enhanced_augmentation=False):
     """
     Factory function to get DataLoaders for a specified dataset.
     Currently only supports CIFAR-10.
