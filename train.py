@@ -37,7 +37,9 @@ def get_model(model_name, num_classes, image_dims):
             dim=768, # 隐层维数
             depth=12, # Transformer层数
             heads=12, #注意力头数
-            mlp_dim=3072 #MLP维数
+            mlp_dim=3072, #MLP维数
+            dropout=0.1,
+            use_mlp_head=True   
         )
     else:
         raise ValueError(f"Model '{model_name}' not supported.")

@@ -8,7 +8,7 @@ class VisionTransformer(nn.Module):
     """
     ViT-Base/16 
     """
-    def __init__(self, image_size=224, patch_size=16, num_classes=10, dim=768, depth=12, heads=12, mlp_dim=3072, dropout=0.1,use_mlp_head=False):
+    def __init__(self, image_size=224, patch_size=16, num_classes=10, dim=768, depth=12, heads=12, mlp_dim=3072, dropout=0.1,use_mlp_head=True):
         super(VisionTransformer, self).__init__()
         assert image_size % patch_size == 0, "Image size must be divisible by patch size" 
         
