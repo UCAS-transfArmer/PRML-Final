@@ -27,7 +27,16 @@ def get_model(model_name, num_classes, image_dims):
     elif model_name == 'boosting':
         pass
     elif model_name == 'vit':
-        pass
+        
+        model=VisionTransformer(
+            image_size=image_dims[1],
+            patch_size=16,  #ViT-B/16
+            num_classes=num_classes, 
+            dim=768, # 隐层维数
+            depth=12, # Transformer层数
+            heads=12, #注意力头数
+            mlp_dim=3072 #MLP维数
+        )
     else:
         raise ValueError(f"Model '{model_name}' not supported.")
     
