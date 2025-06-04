@@ -8,6 +8,8 @@ import datetime
 from utils.arg_util import get_args
 from dataloader.cifar_dataloader import get_dataloader
 
+from utils import wandb_utils
+
 from models import (
     LogisticRegression,
     ResNet,
@@ -121,7 +123,7 @@ def train(args):
 
             # Save model checkpoint
             if args.save_per_iter > 0 and global_step % args.save_per_iter == 0:
-                checkpoint_path = os.path.join(args.save_path, f'{args.model}_{args.dataset}_step_{global_step}.pth')
+                checkpoint_path = os.path.join(args.save_path, f'{args.model}_{args.dataset}_step_{global_step}_{args.exp_name}.pth')
                 torch.save({
                     'global_step': global_step,
                     'epoch': epoch + 1,
@@ -159,5 +161,14 @@ if __name__ == '__main__':
     for arg_name, value in vars(args).items():
         print(f"  {arg_name}: {value}")
     print("-" * 30)
+   
+    # Optional: Initialize Weights & Biases logging
+    '''
+    wandb_utils.initialize(
+        args, 
+        exp_name=args.exp_name, 
+        project_name=args.project_name
+    )
+    '''
     
     train(args)
