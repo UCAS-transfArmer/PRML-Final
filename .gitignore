@@ -11,4 +11,3 @@ wheels/
 
 *.lock
 data/
-ckpts/
