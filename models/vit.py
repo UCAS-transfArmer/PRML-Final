@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import os
 from utils.wandb_utils import initialize, log, log_image
 
 class VisionTransformer(nn.Module):
@@ -9,7 +8,6 @@ class VisionTransformer(nn.Module):
     """
     ViT-Base/16 
     """
-
     def __init__(self, image_size=224, patch_size=16, num_classes=10, dim=768, depth=12, heads=12, mlp_dim=3072, dropout=0.1,use_mlp_head=False):
         super(VisionTransformer, self).__init__()
         assert image_size % patch_size == 0, "Image size must be divisible by patch size" 
@@ -27,7 +25,8 @@ class VisionTransformer(nn.Module):
         self.transformer = nn.ModuleList([
             nn.ModuleList([
                 nn.LayerNorm(dim),
-                nn.MultiheadAttention(dim, heads, dropout=dropout),
+                nn.MultiheadAttention(dim, heads, dropout=dropout,batch_first=True),
+                #PyTorch的MultiheadAttention默认期望的输入是(序列长度, 批量大小, 特征维度),除非将batch_first设置为True
                 nn.LayerNorm(dim),
                 nn.Sequential(
                     nn.Linear(dim, mlp_dim),
@@ -73,6 +72,10 @@ class VisionTransformer(nn.Module):
             elif isinstance(module, nn.Conv2d):
                 nn.init.xavier_uniform_(module.weight)
                 if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+            elif isinstance(module,nn.LayerNorm):
+                if module.elementwise_affine:
+                    nn.init.ones_(module.weight)
                     nn.init.zeros_(module.bias)
     
     def forward(self, x):
