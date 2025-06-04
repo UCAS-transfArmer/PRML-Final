@@ -2,6 +2,10 @@ from tap import Tap
 import torch
 
 class Args(Tap):
+    # Experiment specific arguments
+    project_name: str = 'prml-final'
+    exp_name: str = 'default_experiment'  # Name of the experiment, used for logging and saving checkpoints.
+    
     dataset: str = 'cifar10'  # Dataset to use. Currently only cifar10 is supported.
     
     # Model specific arguments

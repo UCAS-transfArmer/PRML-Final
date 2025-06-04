@@ -9,7 +9,10 @@ import math
 
 
 def is_main_process():
-    return dist.get_rank() == 0
+    # Default: single GPU
+    return True
+    # Multi-GPU training check
+    # return dist.get_rank() == 0
 
 def namespace_to_dict(namespace):
     return {
