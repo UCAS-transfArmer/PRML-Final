@@ -27,7 +27,7 @@ def get_model(model_name, num_classes, image_dims):
     elif model_name == 'resnet':
         pass
     elif model_name == 'boosting':
-        pass
+        model = BoostModel(input_dim=input_dim_flat, num_classes=num_classes, num_estimators=args.num_estimators)
     elif model_name == 'vit':
         
         model=VisionTransformer(
@@ -96,8 +96,9 @@ def train(args):
     model.to(device)
     print(f"Loaded model: {args.model}")
 
-    total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    print(f"Total trainable parameters: {total_params:,}")
+    if isinstance(model, BoostModel)==False:
+        total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        print(f"Total trainable parameters: {total_params:,}")
 
     # Loss function and Optimizer
     criterion = nn.CrossEntropyLoss()
@@ -107,6 +108,40 @@ def train(args):
     print(f"Starting training for {args.ep} epochs...")
     global_step = 0
     start_time = time.time()
+
+    # Special training for Boosting model
+    if isinstance(model, BoostModel):
+        print("Using specialized AdaBoost training...")
+        start_boosting_time = time.time()
+
+        print("Extracting training data from DataLoader...")
+        X_train_list, y_train_list = [], []
+        
+        for batch_idx, (inputs, labels) in enumerate(trainloader):
+            X_train_list.append(inputs)
+            y_train_list.append(labels)
+        
+        X_train = torch.cat(X_train_list, dim=0)
+        y_train = torch.cat(y_train_list, dim=0)
+        
+        print(f"Training data shape: X={X_train.shape}, y={y_train.shape}")
+        
+        model.fit(X_train, y_train, epochs=args.boosting_ep, device=device, test_dataloader=testloader,weak_learner=args.weak_learner_type)
+        boosting_duration = time.time() - start_boosting_time
+        print(f"Boosting training completed in {datetime.timedelta(seconds=int(boosting_duration))}")
+
+        # Save the Boosting model
+        final_model_filename = f'{args.model}_{args.dataset}_final_ep{args.ep}_step{global_step}.pth'
+        final_model_path = os.path.join(args.save_path, final_model_filename)
+        torch.save({
+            'epoch': args.ep,
+            'global_step': global_step,
+            'model_state_dict': model.state_dict(),
+            'args': vars(args)
+        }, final_model_path)
+        print(f'Saved final Boosting model to {final_model_path}')
+        
+        return
 
     for epoch in range(args.ep):
         model.train()  
