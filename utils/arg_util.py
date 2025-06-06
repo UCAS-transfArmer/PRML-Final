@@ -26,6 +26,11 @@ class Args(Tap):
     num_workers: int = 2  # Number of dataloader workers
     device: str = 'cuda' if torch.cuda.is_available() else 'cpu'  # Device to train on
 
+    # Boosting specific arguments
+    num_estimators: int = 20  # Number of weak learners in boosting
+    boosting_ep : int = 50  # Number of epochs for each weak learner in boosting
+    weak_learner_type: str = 'nn'  # Type of weak learner in boosting (choices: cnn, nn, linear)
+
     def process_args(self):
         if self.model not in ['logistic', 'boosting', 'resnet', 'vit']:
             raise ValueError(f"Model {self.model} not supported")
