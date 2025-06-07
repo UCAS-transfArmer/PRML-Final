@@ -101,7 +101,7 @@ def get_scheduler(optimizer, args):
     
     scheduler = OneCycleLR(
         optimizer,
-        max_lr=args.tblr,          # 峰值学习率 3e-4
+        max_lr=args.tblr,          # 峰值学习率 0.01
         total_steps=total_steps,
         pct_start=args.warmup_epochs / args.ep,  # 预热阶段比例
         div_factor=25,             # 初始学习率 = max_lr/25
@@ -148,7 +148,13 @@ def train(args):
 
     # Loss function and Optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.AdamW(model.parameters(), lr=args.tblr/25)  # 从较小的学习率开始
+    optimizer = optim.AdamW(
+        model.parameters(),
+        lr=args.tblr/25,      # 初始学习率会是 0.0004
+        weight_decay=0.0,     # 移除权重衰减
+        betas=(0.9, 0.999),   # AdamW默认值
+        eps=1e-8              # AdamW默认值
+    )
     scheduler = get_scheduler(optimizer, args)
     
     # 更新wandb配置
