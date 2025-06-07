@@ -1,0 +1,35 @@
+Epoch [0], last_lr: 0.00043, train_loss: 1.6469, val_loss: 1.2266, val_acc: 0.5639
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 49 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+Epoch [1], last_lr: 0.00051, train_loss: 1.0375, val_loss: 0.9220, val_acc: 0.6766
+Epoch [2], last_lr: 0.00064, train_loss: 0.8399, val_loss: 0.8064, val_acc: 0.7189
+Traceback (most recent call last):
+  File "/home/inspur/cth/PRML-Final/train.py", line 248, in <module>
+    train(args)
+  File "/home/inspur/cth/PRML-Final/train.py", line 148, in train
+    global_step = train_resnet(
+                  ^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 191, in train_resnet
+    for batch in train_loader:
+                 ^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 49, in __iter__
+    for b in self.dl:
+             ^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 733, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1491, in _next_data
+    idx, data = self._get_data()
+                ^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1443, in _get_data
+    success, data = self._try_get_data()
+                    ^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/utils/data/dataloader.py", line 1284, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/anaconda3/lib/python3.12/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/home/inspur/anaconda3/lib/python3.12/threading.py", line 359, in wait
+    gotit = waiter.acquire(True, timeout)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 98 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.

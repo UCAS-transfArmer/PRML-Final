@@ -3,38 +3,34 @@ import torch.nn as nn
 import torchvision.models as models
 import torch.nn.functional as F
 import os
-from ..utils import wandb_utils
-from ..dataloader.cifar_dataloader import get_cifar10_dataloader
+from utils import wandb_utils
+from dataloader.cifar_dataloader import get_cifar10_dataloader
 
 #########################################
 #           The Residual block          #
 #########################################
 
 class ResidualBlock(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.conv1 = nn.Conv2d(
-            in_channels=3,
-            out_channels=3,
-            kernel_size=3,
-            stride=1,
-            padding=1
-        )
-        self.gelu1 = nn.GELU()
-        self.conv2 = nn.Conv2d(
-            in_channels=3,
-            out_channels=3,
-            kernel_size=3,
-            stride=1,
-            padding=1
-        )
-        self.gelu2 = nn.GELU()
+    """More standard Residual Block."""
 
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        self.conv1 = conv_block(in_channels, out_channels, stride=stride)
+        self.conv2 = conv_block(out_channels, out_channels, stride=1)
+
+        self.shortcut = nn.Sequential()
+        if stride != 1 or in_channels != out_channels:
+            self.shortcut = nn.Sequential(
+                nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride, bias=False),
+                nn.BatchNorm2d(out_channels)
+            )
+    
     def forward(self, x):
         out = self.conv1(x)
-        out = self.gelu1(out)
         out = self.conv2(out)
-        return self.gelu2(out) + x
+        out += self.shortcut(x)
+        out = F.gelu(out)
+        return out
 
 
 #############################################
@@ -67,7 +63,6 @@ class ImageClassificationBase(nn.Module):
         images, labels = batch
         out = self(images) # Generate predictions
         loss = F.cross_entropy(out, labels)
-        self.global_steps += 1
         return loss
     
     def validation_step(self, batch):
@@ -110,10 +105,10 @@ class ResNet(ImageClassificationBase):
 
         self.conv1 = conv_block(in_channels, 64)
         self.conv2 = conv_block(64, 128, pool=True)
-        self.res1 = nn.Sequential(conv_block(128, 128), conv_block(128, 128))
+        self.res1 = ResidualBlock(128, 128)
         self.conv3 = conv_block(128, 256, pool=True)
         self.conv4 = conv_block(256, 512, pool=True)
-        self.res2 = nn.Sequential(conv_block(512, 512), conv_block(512, 512))
+        self.res2 = ResidualBlock(512, 512)
 
         self.classifier = nn.Sequential(
             nn.MaxPool2d(4),
@@ -146,11 +141,11 @@ def accuracy(outputs, labels):
     _, preds = torch.max(outputs, dim=1)
     return torch.tensor(torch.sum(preds == labels).item() / len(preds))
 
-def conv_block(in_channels, out_channels, pool=False):
+def conv_block(in_channels, out_channels, pool=False, stride=1):
     layers = [
-        nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1),
+        nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1, stride=stride, bias=False),
         nn.BatchNorm2d(out_channels),
-        nn.GELU(inplace=True)
+        nn.GELU()
     ]
     if pool:
         layers.append(nn.MaxPool2d(2))
@@ -166,15 +161,20 @@ def get_lr(optimizer):
     for param_group in optimizer.param_groups:
         return param_group['lr']
 
-def train_resnet(args, epochs, max_lr, model, train_loader, val_loader, weight_decay=0, grad_clip=None, opt_func=torch.optim.AdamW):
+def train_resnet(args, epochs, max_lr, model, train_loader, val_loader, device, weight_decay=0, grad_clip=None, opt_func=torch.optim.AdamW):
     # Initialize wandb
     wandb_utils.initialize(
         args,
+        entity="ericguoxy-ucas",
         exp_name=args.exp_name,
         project_name=args.project_name
     )
 
     torch.cuda.empty_cache()
+
+    # Wrap train_loader and val_loader with DeviceDataLoader
+    train_loader = DeviceDataLoader(train_loader, device)
+    val_loader = DeviceDataLoader(val_loader, device)
 
     # Set up a custom optimizer with weight decay
     optimizer = opt_func(model.parameters(), max_lr, weight_decay=weight_decay)
@@ -202,6 +202,7 @@ def train_resnet(args, epochs, max_lr, model, train_loader, val_loader, weight_d
                 nn.utils.clip_grad_value_(model.parameters(), grad_clip)
             
             optimizer.step()
+            sched.step()
 
             # Record & update learning rate
             lrs.append(get_lr(optimizer))
@@ -211,15 +212,4 @@ def train_resnet(args, epochs, max_lr, model, train_loader, val_loader, weight_d
         result['train_loss'] = torch.stack(train_losses).mean().item()
         result['lrs'] = lrs
         model.epoch_end(epoch, result, global_steps)
-
-    # Save the final model
-    final_model_filename = f'{args.model}_{args.dataset}_final_ep{args.ep}_step{global_steps}.pth'
-    final_model_path = os.path.join(args.save_path, final_model_filename)
-    torch.save({
-        'epoch': args.ep,
-        'global_step': global_steps,
-        'model_state_dict': model.state_dict(),
-        'optimizer_state_dict': optimizer.state_dict(),
-        'args': vars(args)
-    }, final_model_path)
-    print(f'Saved final model to {final_model_path}')
+    return global_steps

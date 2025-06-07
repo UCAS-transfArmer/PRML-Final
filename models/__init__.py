@@ -1,4 +1,4 @@
 from .logistic import LogisticRegression
-from .boosting import BoostingModel
+from .boosting import BoostModel
 from .resnet import ResNet
 from .vit import VisionTransformer

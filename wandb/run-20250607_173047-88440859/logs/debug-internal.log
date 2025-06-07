@@ -1,0 +1,18 @@
+{"time":"2025-06-07T17:30:47.894603519+08:00","level":"INFO","msg":"stream: starting","core version":"0.20.1","symlink path":"/home/inspur/cth/PRML-Final/wandb/run-20250607_173047-88440859/logs/debug-core.log"}
+{"time":"2025-06-07T17:30:48.526671233+08:00","level":"INFO","msg":"stream: created new stream","id":"88440859"}
+{"time":"2025-06-07T17:30:48.526874692+08:00","level":"INFO","msg":"stream: started","id":"88440859"}
+{"time":"2025-06-07T17:30:48.526900954+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"88440859"}
+{"time":"2025-06-07T17:30:48.526943937+08:00","level":"INFO","msg":"sender: started","stream_id":"88440859"}
+{"time":"2025-06-07T17:30:48.526921784+08:00","level":"INFO","msg":"handler: started","stream_id":"88440859"}
+{"time":"2025-06-07T17:30:49.470140869+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-06-07T17:30:55.662349072+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":49,"current":4901}
+{"time":"2025-06-07T17:31:01.47690162+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":98,"current":4901}
+{"time":"2025-06-07T17:31:07.289891766+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":147,"current":4901}
+{"time":"2025-06-07T17:31:09.545238929+08:00","level":"INFO","msg":"stream: closing","id":"88440859"}
+{"time":"2025-06-07T17:31:09.54530109+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-06-07T17:31:09.545363532+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-06-07T17:31:10.450883227+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-06-07T17:31:10.951222496+08:00","level":"INFO","msg":"handler: closed","stream_id":"88440859"}
+{"time":"2025-06-07T17:31:10.951264816+08:00","level":"INFO","msg":"sender: closed","stream_id":"88440859"}
+{"time":"2025-06-07T17:31:10.951251686+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":"88440859"}
+{"time":"2025-06-07T17:31:10.951413854+08:00","level":"INFO","msg":"stream: closed","id":"88440859"}

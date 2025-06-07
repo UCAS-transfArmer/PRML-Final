@@ -145,18 +145,29 @@ def train(args):
         return
     elif isinstance(model, ResNet):
         # Special training for ResNet
-        train_resnet(
+        global_step = train_resnet(
             args=args,
             epochs=args.ep,
             max_lr=args.max_lr,
             model=model,
             train_loader=trainloader,
             val_loader=testloader,
+            device=device,
             weight_decay=args.weight_decay,
             opt_func=torch.optim.AdamW
         )
 
-        
+        # Save the final model
+        final_model_filename = f'{args.model}_{args.dataset}_final_ep{args.ep}_step{global_step}.pth'
+        final_model_path = os.path.join(args.save_path, final_model_filename)
+        torch.save({
+            'epoch': args.ep,
+            'global_step': global_step,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'args': args
+        }, final_model_path)
+        print(f'Saved final model to {final_model_path}')        
 
         return
 
