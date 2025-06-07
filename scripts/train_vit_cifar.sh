@@ -6,10 +6,10 @@ python train.py \
     --dataset=cifar10 \
     --bs=256 \
     --ep=200 \
-    --tblr=3e-4 \
+    --tblr=0.01 \
     --warmup_epochs=5 \
-    --min_lr=1e-6 \
-    --warmup_start_lr=1e-6 \
+    --min_lr=3e-4 \
+    --warmup_start_lr=1e-5 \
     --save_path=./ckpts \
     --exp_name=vit-cifar10-new \
     --image_size=32 \
