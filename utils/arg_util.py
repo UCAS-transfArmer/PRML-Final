@@ -14,6 +14,8 @@ class Args(Tap):
     # Training specific arguments
     ep: int = 400  # Number of epochs
     tblr: float = 1e-4  # Initial learning rate for bs = 1024
+    max_lr: float = 0.01 # Used in the ResNet training phase for One Cycle Learning Rate Policy scheduler
+    weight_decay: float = 1e-4 # Used for ResNet lr scheduling
     bs: int = 1024  # Batch size
     bs_base: int = 1024  # Base batch size for scaling learning rate
     

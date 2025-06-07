@@ -58,10 +58,10 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
         # Standard transforms for CNNs like ResNet (32x32)
         image_size = 32
         transform_train_list = [
-            transforms.RandomCrop(image_size, padding=4, pad_if_needed=True),
+            transforms.RandomCrop(image_size, padding=4, padding_mode='reflect'),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(cifar10_mean, cifar10_std),
+            transforms.Normalize(cifar10_mean, cifar10_std, inplace=True),
         ]
         transform_test_list = [
             transforms.ToTensor(),

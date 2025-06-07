@@ -13,3 +13,6 @@ dependencies = [
     "typed-argument-parser>=1.10.1",
     "wandb>=0.19.11",
 ]
+
+[tool.setuptools]
+packages = []

@@ -7,13 +7,14 @@ import datetime
 
 from utils.arg_util import get_args
 from dataloader.cifar_dataloader import get_dataloader
+from models.resnet import train_resnet
 
 from utils import wandb_utils
 
 from models import (
     LogisticRegression,
     ResNet,
-    BoostingModel,
+    BoostModel,
     VisionTransformer
 )
 
@@ -25,7 +26,7 @@ def get_model(model_name, num_classes, image_dims):
     if model_name == 'logistic':
         model = LogisticRegression(input_dim=input_dim_flat, num_classes=num_classes)
     elif model_name == 'resnet':
-        pass
+        model = ResNet(C, num_classes)
     elif model_name == 'boosting':
         model = BoostModel(input_dim=input_dim_flat, num_classes=num_classes, num_estimators=args.num_estimators)
     elif model_name == 'vit':
@@ -141,6 +142,22 @@ def train(args):
         }, final_model_path)
         print(f'Saved final Boosting model to {final_model_path}')
         
+        return
+    elif isinstance(model, ResNet):
+        # Special training for ResNet
+        train_resnet(
+            args=args,
+            epochs=args.ep,
+            max_lr=args.max_lr,
+            model=model,
+            train_loader=trainloader,
+            val_loader=testloader,
+            weight_decay=args.weight_decay,
+            opt_func=torch.optim.AdamW
+        )
+
+        
+
         return
 
     for epoch in range(args.ep):
