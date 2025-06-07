@@ -1,0 +1,7 @@
+torch>=1.7.0         # PyTorch 深度学习框架
+torchvision>=0.8.1   # PyTorch 的计算机视觉工具包
+wandb>=0.12.0        # Weights & Biases 实验跟踪工具
+numpy>=1.19.2        # 科学计算库
+pillow>=8.0.1        # 图像处理库
+tqdm>=4.50.0         # 进度条显示
+matplotlib>=3.3.0    # 绘图库，用于可视化

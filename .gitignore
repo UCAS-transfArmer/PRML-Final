@@ -11,3 +11,8 @@ wheels/
 
 *.lock
 data/
+
+# wandb
+wandb/*
+!wandb/config.yaml
+ckpts/

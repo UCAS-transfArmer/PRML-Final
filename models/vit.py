@@ -4,11 +4,20 @@ import torch.nn.functional as F
 from utils.wandb_utils import initialize, log, log_image
 
 class VisionTransformer(nn.Module):
-
     """
     ViT-Base/16 
     """
-    def __init__(self, image_size=224, patch_size=16, num_classes=10, dim=768, depth=12, heads=12, mlp_dim=3072, dropout=0.1,use_mlp_head=True):
+    def __init__(
+            self, 
+            image_size=32, 
+            patch_size=4, 
+            num_classes=10, 
+            dim=384, 
+            depth=6, 
+            heads=6, 
+            mlp_dim=1536, 
+            dropout=0.1,
+            use_mlp_head=True):
         super(VisionTransformer, self).__init__()
         assert image_size % patch_size == 0, "Image size must be divisible by patch size" 
         
@@ -16,6 +25,8 @@ class VisionTransformer(nn.Module):
         patch_dim = 3 * patch_size * patch_size  #3 channels (RGB)
         
         # Patch embedding
+        self.patch_size = patch_size
+
         self.patch_embed = nn.Conv2d(3, dim, kernel_size=patch_size, stride=patch_size)
         self.pos_embed = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))

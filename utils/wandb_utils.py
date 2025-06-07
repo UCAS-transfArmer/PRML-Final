@@ -26,17 +26,43 @@ def generate_run_id(exp_name):
     return str(int(hashlib.sha256(exp_name.encode('utf-8')).hexdigest(), 16) % 10 ** 8)
 
 
-def initialize(args, entity, exp_name, project_name):
-    config_dict = namespace_to_dict(args)
-    wandb.login(key=os.environ["WANDB_KEY"])
+def initialize(args, exp_name, project_name, model=None):
+    """初始化wandb日志记录"""
+    print("初始化wandb日志...")
+    
+    group = "vit-cifar10"
     wandb.init(
-        entity=entity,
         project=project_name,
         name=exp_name,
-        config=config_dict,
-        id=generate_run_id(exp_name),
-        resume="allow",
+        config=vars(args),
+        group=group,
+        notes="从头开始训练ViT (使用优化后的学习率调度器)",  # 修改训练说明
+        settings=wandb.Settings(
+            start_method="thread",
+            _disable_stats=True,
+            sync_tensorboard=False
+        )
     )
+    
+    # 添加学习率相关配置
+    wandb.config.update({
+        "lr_schedule": "one_cycle",
+        "max_lr": args.tblr,
+        "warmup_epochs": args.warmup_epochs,
+        "min_lr": args.min_lr,
+        "warmup_start_lr": args.warmup_start_lr
+    })
+    
+    # 添加学习率图表配置
+    wandb.define_metric("train/learning_rate", summary="min")
+    wandb.define_metric("train/learning_rate", summary="max")
+    wandb.define_metric("epoch")
+    
+    if model is not None:
+        wandb.watch(model, log="gradients", log_freq=100)
+    
+    print("wandb日志初始化成功!")
+    return wandb.run
 
 
 def log(stats, step=None):
@@ -55,3 +81,22 @@ def array2grid(x):
     x = make_grid(x, nrow=nrow, normalize=True, value_range=(-1,1))
     x = x.mul(255).add_(0.5).clamp_(0,255).permute(1,2,0).to('cpu', torch.uint8).numpy()
     return x
+
+def log_confusion_matrix(labels, predictions, class_names):
+    """记录混淆矩阵"""
+    wandb.log({
+        "confusion_matrix": wandb.plot.confusion_matrix(
+            y_true=labels,
+            preds=predictions,
+            class_names=class_names
+        )
+    })
+
+def log_sample_predictions(images, predictions, labels, class_names):
+    """记录预测样本"""
+    wandb.log({
+        "sample_predictions": wandb.Image(
+            images,
+            caption=f"Pred: {class_names[predictions]}, True: {class_names[labels]}"
+        )
+    })
