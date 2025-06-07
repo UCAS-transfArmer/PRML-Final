@@ -96,34 +96,69 @@ class ImageClassificationBase(nn.Module):
 
 class ResNet(ImageClassificationBase):
     """
-    ResNet-9
+    Configurable ResNet architecture.
+    For ResNet-20 (19 conv + 1 FC): block_config=[3, 3, 3]
+    For ResNet-32 (31 conv + 1 FC): block_config=[5, 5, 5]
+    For ResNet-56 (55 conv + 1 FC): block_config=[9, 9, 9]
+    Each ResidualBlock contains 2 convolutional layers.
     """
 
-    def __init__(self, in_channels, num_classes):
+    def __init__(self, in_channels, num_classes, block_config=[3,3,3], channels_config=[64, 128, 256]):
         super().__init__()
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-        self.conv1 = conv_block(in_channels, 64)
-        self.conv2 = conv_block(64, 128, pool=True)
-        self.res1 = ResidualBlock(128, 128)
-        self.conv3 = conv_block(128, 256, pool=True)
-        self.conv4 = conv_block(256, 512, pool=True)
-        self.res2 = ResidualBlock(512, 512)
+        assert len(block_config) == 3, "block_config should have 3 elements for 3 stages."
+        assert len(channels_config) == 3, "channels_config should have 3 elements for 3 stages."
 
-        self.classifier = nn.Sequential(
-            nn.MaxPool2d(4),
-            nn.Flatten(),
-            nn.Linear(512, num_classes)
-        )
+        # Initial convolutional layer
+        # The first element of channels_config defines the output channels of the initial conv and the first stage
+        initial_conv_out_channels = channels_config[0]
+
+        self.conv1 = conv_block(in_channels, initial_conv_out_channels, pool=False, stride=1)
+        current_channels = initial_conv_out_channels
+
+        # Stage 1
+        self.stage1 = self._make_layer(ResidualBlock, current_channels, channels_config[0], block_config[0], stride=1)
+
+        # Stage 2
+        self.stage2 = self._make_layer(ResidualBlock, channels_config[0], channels_config[1], block_config[1], stride=2)
+        current_channels = channels_config[1]
+
+        # Stage 3
+        self.stage3 = self._make_layer(ResidualBlock, current_channels, channels_config[2], block_config[2], stride=2)
+        current_channels = channels_config[2]
+
+        # Classifier
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(current_channels, num_classes)
     
-    def forward(self, xb):
-        out = self.conv1(xb)
-        out = self.conv2(out)
-        out = self.res1(out) + out
-        out = self.conv3(out)
-        out = self.conv4(out)
-        out = self.res2(out) + out
-        out = self.classifier(out)
+    def _make_layer(self, block_class, in_channels_stage, out_channels_stage, num_blocks, stride):
+        """
+        Creates a stage of residual blocks.
+        - block_class: The class of the residual block to use (e.g., ResidualBlock).
+        - in_channels_stage: Input channels to the first block of this stage.
+        - out_channels_stage: Output channels from all blocks in this stage.
+        - num_blocks: Number of residual blocks in this stage.
+        - stride: Stride for the first block of this stage (for downsampling).
+        """
+        layers = []
+        # First block: handles potential downsampling (stride) and change in channel dimensions
+        layers.append(block_class(in_channels_stage, out_channels_stage, stride=stride))
+
+        # Subsequent blocks: maintain channel dimensions (out_channels_stage -> out_channels_stage) and use stride=1
+        for _ in range(1, num_blocks):
+            layers.append(block_class(out_channels_stage, out_channels_stage, stride=1))
+        
+        return nn.Sequential(*layers)
+    
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.stage1(out)
+        out = self.stage2(out)
+        out = self.stage3(out)
+        out = self.avgpool(out)
+        out = torch.flatten(out, 1)
+        out = self.fc(out)
         return out
 
 
