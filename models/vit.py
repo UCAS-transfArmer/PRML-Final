@@ -5,23 +5,30 @@ from utils.wandb_utils import initialize, log, log_image
 
 class VisionTransformer(nn.Module):
     """
-    ViT-Base/16 
+    标准 ViT-Base/16 配置:
+    - 输入图像: 224x224
+    - Patch 大小: 16x16
+    - 隐层维度: 768
+    - MLP 维度: 3072 (4x hidden_dim)
+    - 层数: 12
+    - 注意力头数: 12
+    - 参数量: ~86M
     """
     def __init__(
             self, 
-            image_size=32, 
-            patch_size=4, 
-            num_classes=10, 
-            dim=384, 
-            depth=6, 
-            heads=6, 
-            mlp_dim=1536, 
+            image_size=224,        # 修改默认值为224
+            patch_size=16,         # 修改默认值为16
+            num_classes=10,        # CIFAR-10保持不变
+            dim=768,              # 修改为768
+            depth=12,             # 修改为12层
+            heads=12,             # 修改为12个头
+            mlp_dim=3072,         # 修改为3072
             dropout=0.1,
-            use_mlp_head=True):
+            use_mlp_head=False):
         super(VisionTransformer, self).__init__()
         assert image_size % patch_size == 0, "Image size must be divisible by patch size" 
         
-        num_patches = (image_size // patch_size) ** 2
+        num_patches = (image_size // patch_size) ** 2  # 对于224/16=196个patch
         patch_dim = 3 * patch_size * patch_size  #3 channels (RGB)
         
         # Patch embedding

@@ -20,15 +20,17 @@ def get_cifar10_dataloader(batch_size=128, num_workers=2, data_root='./data', fo
     
     if for_vit:
         transform_train = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),  # 保持32x32大小
+            transforms.Resize(224),  # 调整到224x224
+            transforms.RandomCrop(224, padding=28),  # 添加padding
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
-            transforms.Normalize(mean, std)
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
         
         transform_test = transforms.Compose([
+            transforms.Resize(224),  # 调整到224x224
             transforms.ToTensor(),
-            transforms.Normalize(mean, std)
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
         ])
     else:
         # 非 ViT 模型的标准变换
@@ -76,9 +78,9 @@ def get_cifar10_dataloader(batch_size=128, num_workers=2, data_root='./data', fo
         pin_memory=True
     )
     
-    return trainloader, testloader, 10, (3, 32, 32)
+    return trainloader, testloader, 10, (3, 224, 224)  # 修改返回的图像维度为 224x224
 
-def get_dataloader(dataset_name, batch_size, num_workers, data_root='./data', for_vit=False,enhanced_augmentation=False):
+def get_dataloader(dataset_name, batch_size, num_workers=4, data_root='./data', for_vit=True, enhanced_augmentation=False):
     """
     Factory function to get DataLoaders for a specified dataset.
     Currently only supports CIFAR-10.

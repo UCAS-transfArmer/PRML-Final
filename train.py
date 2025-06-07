@@ -13,6 +13,7 @@ from utils.arg_util import get_args
 from dataloader.cifar_dataloader import get_dataloader
 
 from utils import wandb_utils
+from utils.scheduler import create_scheduler  # 确保这个导入存在
 
 from models import (
     LogisticRegression,
@@ -90,28 +91,6 @@ def evaluate(model, dataloader, criterion, device, epoch_num=None):
 
 
 
-def get_scheduler(optimizer, args):
-    """获取带预热的余弦学习率调度器"""
-    # 计算总步数
-    num_steps_per_epoch = 50000 // args.bs  # CIFAR-10 训练集大小
-    total_steps = args.ep * num_steps_per_epoch
-    warmup_steps = args.warmup_epochs * num_steps_per_epoch
-    
-    from torch.optim.lr_scheduler import OneCycleLR
-    
-    scheduler = OneCycleLR(
-        optimizer,
-        max_lr=args.tblr,          # 峰值学习率 0.01
-        total_steps=total_steps,
-        pct_start=args.warmup_epochs / args.ep,  # 预热阶段比例
-        div_factor=25,             # 初始学习率 = max_lr/25
-        final_div_factor=1e4,      # 最终学习率 = 初始学习率/1e4
-        three_phase=True,          # 使用三阶段策略
-        anneal_strategy='cos'      # 余弦退火
-    )
-    
-    return scheduler
-
 def train(args):
     device = torch.device(args.device)
     
@@ -150,16 +129,15 @@ def train(args):
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.AdamW(
         model.parameters(),
-        lr=args.tblr/25,      # 初始学习率会是 0.0004
-        weight_decay=0.0,     # 移除权重衰减
-        betas=(0.9, 0.999),   # AdamW默认值
-        eps=1e-8              # AdamW默认值
+        lr=args.warmup_start_lr,  # 从预热起始学习率开始
+        weight_decay=0.05,        # ViT论文中使用的权重衰减
+        betas=(0.9, 0.999)
     )
-    scheduler = get_scheduler(optimizer, args)
+    scheduler = create_scheduler(optimizer, args)
     
     # 更新wandb配置
     wandb.config.update({
-        "model_type": "ViT",
+        "model_type": "ViT-Base/16",  # 更新模型类型名称
         "image_size": args.image_size,
         "patch_size": args.patch_size,
         "dim": args.dim,
@@ -171,7 +149,8 @@ def train(args):
         "epochs": args.ep,
         "learning_rate": args.tblr,
         "optimizer": "AdamW",
-        "device": str(device)
+        "device": str(device),
+        "model_variant": "Base/16"  # 添加变体信息
     })
 
     # 初始化训练状态
@@ -205,7 +184,6 @@ def train(args):
                 loss = criterion(outputs, labels)
                 loss.backward()
                 optimizer.step()
-                scheduler.step()  # 只在这里更新学习率
                 
                 running_loss += loss.item()
                 global_step += 1
