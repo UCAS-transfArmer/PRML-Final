@@ -224,7 +224,6 @@ def train(args):
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'loss': loss.item(), # Current batch loss
-                        'args': vars(args) # Save command line arguments
                     }, checkpoint_path)
                     print(f'Saved checkpoint to {checkpoint_path}')
             
