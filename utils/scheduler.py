@@ -12,9 +12,9 @@ class WarmupCosineScheduler(_LRScheduler):
         optimizer,
         warmup_epochs,
         max_epochs,
-        warmup_start_lr=1e-5,
-        max_lr=1e-2,
-        min_lr=1e-5,
+        warmup_start_lr=1e-6,
+        max_lr=3e-4,
+        min_lr=1e-6,
         last_epoch=-1
     ):
         self.warmup_epochs = warmup_epochs
