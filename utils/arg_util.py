@@ -3,6 +3,7 @@ import torch
 
 class Args(Tap):
     # Experiment specific arguments
+    wandb: int = 0 # Enable Weights & Biases logging
     project_name: str = 'prml-final'
     exp_name: str = 'default_experiment'  # Name of the experiment, used for logging and saving checkpoints.
     

@@ -50,32 +50,6 @@ def get_model(model_name, num_classes, image_dims):
     
     return model
 
-def evaluate(model, dataloader, criterion, device, epoch_num=None):
-
-    model.eval()  
-    total_loss = 0.0
-    correct_predictions = 0
-    total_samples = 0
-    
-    with torch.no_grad(): 
-        for inputs, labels in dataloader:
-            inputs, labels = inputs.to(device), labels.to(device)
-            
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            
-            total_loss += loss.item() * inputs.size(0) 
-            _, predicted_labels = torch.max(outputs, 1)
-            
-            total_samples += labels.size(0)
-            correct_predictions += (predicted_labels == labels).sum().item()
-            
-    avg_loss = total_loss / total_samples
-    accuracy = 100.0 * correct_predictions / total_samples
-    
-    epoch_str = f"Epoch {epoch_num} " if epoch_num is not None else ""
-    print(f'{epoch_str}Test Set: Avg. Loss: {avg_loss:.4f}, Accuracy: {correct_predictions}/{total_samples} ({accuracy:.2f}%)')
-    return avg_loss, accuracy
 
 def train(args):
     """Main training loop."""
@@ -172,49 +146,97 @@ def train(args):
         }, final_model_path)
         print(f'Saved final model to {final_model_path}')        
 
-        return
+    elif isinstance(model, LogisticRegression):
 
-    for epoch in range(args.ep):
-        model.train()  
-        running_loss = 0.0
-        epoch_start_time = time.time()
+        def evaluate_step(model, dataloader, criterion, device, epoch_num, global_step):
 
-        for i, (inputs, labels) in enumerate(trainloader):
-            inputs, labels = inputs.to(device), labels.to(device)
-            optimizer.zero_grad()
+            model.eval()  
+            total_loss = 0.0
+            correct_predictions = 0
+            total_samples = 0
+            
+            with torch.no_grad(): 
+                for inputs, labels in dataloader:
+                    inputs, labels = inputs.to(device), labels.to(device)
+                    
+                    outputs = model(inputs)
+                    loss = criterion(outputs, labels)
+                    
+                    total_loss += loss.item() * inputs.size(0) 
+                    _, predicted_labels = torch.max(outputs, 1)
+                    
+                    total_samples += labels.size(0)
+                    correct_predictions += (predicted_labels == labels).sum().item()
+                    
+            avg_loss = total_loss / total_samples
+            accuracy = 100.0 * correct_predictions / total_samples
+            
+            epoch_str = f"Epoch {epoch_num} "
+            print(f'{epoch_str}Test Set: Avg. Loss: {avg_loss:.4f}, Accuracy: {correct_predictions}/{total_samples} ({accuracy:.2f}%)')
+            if args.wandb:
+                wandb_utils.log({
+                    'test_loss': avg_loss,
+                    'test_acc': accuracy
+                }, step=global_step)
+            
+            return avg_loss, accuracy
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+        for epoch in range(args.ep):
+            model.train()  
+            running_loss = 0.0
+            running_acc = 0.0
+            epoch_start_time = time.time()
 
-            loss.backward()
-            optimizer.step()
+            for i, (inputs, labels) in enumerate(trainloader):
+                inputs, labels = inputs.to(device), labels.to(device)
+                optimizer.zero_grad()
 
-            running_loss += loss.item()
-            global_step += 1
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
 
-            if args.log_per_iter > 0 and global_step % args.log_per_iter == 0:
-                # Calculate average loss over the logging interval
-                avg_loss_interval = running_loss / args.log_per_iter 
-                print(f'[Epoch {epoch + 1}/{args.ep}, Iter {i + 1}/{len(trainloader)}, Global Step {global_step}] loss: {avg_loss_interval:.4f}')
-                running_loss = 0.0 # Reset running loss for the next interval
+                loss.backward()
+                optimizer.step()
 
-            # Save model checkpoint
-            if args.save_per_iter > 0 and global_step % args.save_per_iter == 0:
-                checkpoint_path = os.path.join(args.save_path, f'{args.model}_{args.dataset}_step_{global_step}_{args.exp_name}.pth')
-                torch.save({
-                    'global_step': global_step,
-                    'epoch': epoch + 1,
-                    'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict(),
-                    'loss': loss.item(), # Current batch loss
-                    'args': vars(args) # Save command line arguments
-                }, checkpoint_path)
-                print(f'Saved checkpoint to {checkpoint_path}')
-        
-        epoch_duration = time.time() - epoch_start_time
-        print(f"Epoch {epoch + 1} finished. Duration: {epoch_duration:.2f}s. Learning Rate: {optimizer.param_groups[0]['lr']:.2e}")
+                running_loss += loss.item()
+                acc = (outputs.argmax(dim=1) == labels).float().mean().item()
+                running_acc += acc
+                global_step += 1
 
-        evaluate(model, testloader, criterion, device, epoch_num=epoch + 1)
+                if args.log_per_iter > 0 and global_step % args.log_per_iter == 0:
+                    # Calculate average loss over the logging interval
+                    avg_loss_interval = running_loss / args.log_per_iter 
+                    avg_acc_interval = running_acc / args.log_per_iter
+
+                    print(f'[Epoch {epoch + 1}/{args.ep}, Iter {i + 1}/{len(trainloader)}, Global Step {global_step}] loss: {avg_loss_interval:.4f}')
+
+                    running_loss = 0.0 
+                    running_acc = 0.0 
+                    
+                    if args.wandb:
+                        wandb_utils.log({
+                            'train_loss': avg_loss_interval,
+                            'train_acc': avg_acc_interval,
+                        }, step=global_step)
+                        
+
+                # Save model checkpoint
+                if args.save_per_iter > 0 and global_step % args.save_per_iter == 0:
+                    checkpoint_path = os.path.join(args.save_path, f'{args.model}_{args.dataset}_step_{global_step}_{args.exp_name}.pth')
+                    torch.save({
+                        'global_step': global_step,
+                        'epoch': epoch + 1,
+                        'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict(),
+                        'loss': loss.item(), # Current batch loss
+                    }, checkpoint_path)
+                    print(f'Saved checkpoint to {checkpoint_path}')
+            
+            epoch_duration = time.time() - epoch_start_time
+            print(f"Epoch {epoch + 1} finished. Duration: {epoch_duration:.2f}s. Learning Rate: {optimizer.param_groups[0]['lr']:.2e}")
+
+            evaluate_step(model, testloader, criterion, device, epoch_num=epoch + 1, global_step=global_step)
+    else:
+        raise ValueError(f"Model '{args.model}' is not supported for training.")
 
     total_training_time = time.time() - start_time
     print(f'Finished Training. Total time: {datetime.timedelta(seconds=int(total_training_time))}')
@@ -239,13 +261,11 @@ if __name__ == '__main__':
         print(f"  {arg_name}: {value}")
     print("-" * 30)
    
-    # Optional: Initialize Weights & Biases logging
-    '''
-    wandb_utils.initialize(
-        args, 
-        exp_name=args.exp_name, 
-        project_name=args.project_name
-    )
-    '''
+    if args.wandb:
+        wandb_utils.wandb.init(
+            project=args.project_name,
+            name=args.exp_name,
+            config={}
+        )
     
     train(args)
