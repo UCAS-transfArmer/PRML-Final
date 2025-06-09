@@ -1,10 +1,7 @@
 import torch
 import torch.nn as nn
-import torchvision.models as models
 import torch.nn.functional as F
-import os
 from utils import wandb_utils
-from dataloader.cifar_dataloader import get_cifar10_dataloader
 
 #########################################
 #           The Residual block          #
