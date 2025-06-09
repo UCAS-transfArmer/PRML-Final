@@ -14,3 +14,5 @@ data/
 prml/
 saves/
 wandb/
+ckpts/
+**/.DS_Store

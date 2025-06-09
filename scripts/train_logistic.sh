@@ -2,7 +2,7 @@ wandb online
 python train.py \
     --dataset=cifar10 \
     --model=logistic \
-    --bs=1024 \
+    --bs=128 \
     --ep=100 \
     --tblr=1e-5 \
     --save_path=./ckpts \
