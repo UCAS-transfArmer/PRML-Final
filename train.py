@@ -5,7 +5,6 @@ import os
 import time
 import datetime
 from tqdm import tqdm
-tqdm.pandas(ncols=80)
 
 from utils.arg_util import get_args
 from dataloader.dataloader import get_dataloader

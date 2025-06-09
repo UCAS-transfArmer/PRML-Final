@@ -5,9 +5,9 @@ python train.py \
     --model=vit \
     --dataset=cifar10 \
     --data_root=./data \
-    --bs=128 \
+    --bs=256 \
     --ep=100 \
-    --tblr=3e-4 \
+    --lr=2e-3 \
     --warmup_epochs=5 \
     --warmup_start_lr=1e-6 \
     --min_lr=1e-6 \

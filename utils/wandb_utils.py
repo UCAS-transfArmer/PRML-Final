@@ -64,7 +64,7 @@ def initialize(args, exp_name, project_name, model=None):
     # 添加学习率相关配置
     lr_config = {
         "lr_schedule": "one_cycle",
-        "max_lr": args.tblr,
+        "max_lr": args.lr,
         "warmup_epochs": args.warmup_epochs,
         "min_lr": args.min_lr,
         "warmup_start_lr": args.warmup_start_lr,
@@ -141,16 +141,20 @@ def log_training_batch(loss, current_lr, global_step, log_interval=100):
         })
 
 
-def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr):
+def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, val_acc_top5=None): # 添加 val_acc_top5 参数
     """记录每个epoch的指标"""
     if is_main_process():
-        log({
+        metrics_to_log = {
             "val/loss": val_loss,
-            "val/accuracy": val_acc,
+            "val/accuracy_top1": val_acc, # 更新名称以示区分
             "train/avg_loss": train_loss,
             "train/learning_rate": current_lr,
             "epoch": epoch
-        })
+        }
+        if val_acc_top5 is not None: # 如果提供了 Top-5 准确率，则记录
+            metrics_to_log["val/accuracy_top5"] = val_acc_top5
+        
+        log(metrics_to_log)
 
 
 def save_checkpoint(model, optimizer, epoch, args, is_best=False, checkpoint_name=None):
@@ -158,9 +162,12 @@ def save_checkpoint(model, optimizer, epoch, args, is_best=False, checkpoint_nam
     if not is_main_process():
         return
         
+    # 处理 nn.DataParallel 包装的模型
+    model_state_dict_to_save = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
+
     checkpoint = {
         'epoch': epoch,
-        'model_state_dict': model.state_dict(),
+        'model_state_dict': model_state_dict_to_save, # 使用处理后的 state_dict
         'optimizer_state_dict': optimizer.state_dict(),
         'args': vars(args)
     }

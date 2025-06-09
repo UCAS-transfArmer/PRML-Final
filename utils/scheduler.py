@@ -52,6 +52,6 @@ def create_scheduler(optimizer, args):
         warmup_epochs=args.warmup_epochs,
         max_epochs=args.ep,
         warmup_start_lr=args.warmup_start_lr,
-        max_lr=args.tblr,
+        max_lr=args.lr, 
         min_lr=args.min_lr
     )

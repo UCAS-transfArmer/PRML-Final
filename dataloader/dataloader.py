@@ -107,13 +107,13 @@ def get_cifar10_dataloader(
 
 
 def get_imagenet_dataloader(
-    batch_size=64,
-    num_workers=8,
+    batch_size=256,  # 与 pretrain_vit_imagenet.sh 中的 --bs 对齐
+    num_workers=8,   # 与 pretrain_vit_imagenet.sh 中的 --num_workers 对齐
     data_root='./data/imagenet',
     for_vit=True,
-    image_size=224,
+    image_size=224,  # 与 pretrain_vit_imagenet.sh 中的 --image_size 对齐
     crop_ratio=0.875,  # 标准 ImageNet 裁剪比例
-    enhanced_augmentation=False
+    enhanced_augmentation=True  # 与 pretrain_vit_imagenet.sh 中的 --enhanced_augmentation 对齐
 ):
     """
     创建 ImageNet 数据加载器
@@ -135,12 +135,24 @@ def get_imagenet_dataloader(
     val_dir = os.path.join(data_root, 'val')
     
     if not os.path.exists(train_dir) or not os.path.exists(val_dir):
-        raise ValueError(
-            f"ImageNet 数据目录结构不正确。期望结构:\n"
+        error_message = (
+            f"ImageNet 数据目录结构不正确。期望的根目录 '{data_root}' 下应包含 'train' 和 'val' 子目录。\n"
+            f"请从 http://image-net.org 手动下载 ImageNet ILSVRC2012 数据集，\n"
+            f"并将其解压和组织成以下结构:\n"
             f"{data_root}/\n"
-            f"├── train/  # 训练集文件夹，包含1000个子文件夹\n"
-            f"└── val/    # 验证集文件夹，包含1000个子文件夹"
+            f"├── train/\n"
+            f"│   ├── n01440764/  # (类别ID，例如 tench)\n"
+            f"│   │   ├── n01440764_10026.JPEG\n"
+            f"│   │   └── ...\n"
+            f"│   └── ... (其他类别)\n"
+            f"└── val/\n"
+            f"    ├── n01440764/\n"
+            f"    │   ├── ILSVRC2012_val_00000293.JPEG\n"
+            f"    │   └── ...\n"
+            f"    └── ... (其他类别)\n"
+            f"有关组织验证集的脚本，请参考常见的 PyTorch ImageNet 示例。"
         )
+        raise ValueError(error_message)
     
     # 计算验证集的裁剪大小
     resize_size = int(image_size / crop_ratio)
