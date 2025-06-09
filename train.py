@@ -14,6 +14,7 @@ from utils import wandb_utils
 from models import (
     LogisticRegression,
     ResNet,
+    CNN,
     BoostModel,
     VisionTransformer
 )
@@ -26,7 +27,9 @@ def get_model(model_name, num_classes, image_dims):
     if model_name == 'logistic':
         model = LogisticRegression(input_dim=input_dim_flat, num_classes=num_classes)
     elif model_name == 'resnet':
-        model = ResNet(C, num_classes)
+        model = ResNet(in_channels=C, num_classes=num_classes, block_config=[9, 9, 9]) 
+    elif model_name == 'cnn':
+        model = CNN(in_channels=C, num_classes=num_classes, block_config=[9, 9, 9])
     elif model_name == 'boosting':
         model = BoostModel(input_dim=input_dim_flat, num_classes=num_classes, num_estimators=args.num_estimators)
     elif model_name == 'vit':
@@ -88,7 +91,7 @@ def train(args):
     # DataLoaders
     is_vit_model = (args.model == 'vit')
     trainloader, testloader, num_classes, image_dims = get_dataloader(
-        args.dataset, args.bs, args.num_workers, data_root='./data', for_vit=is_vit_model
+        args.dataset, args.bs, args.num_workers, data_root='./data', for_vit=is_vit_model, enhanced_augmentation=True
     )
     print(f"Loaded dataset: {args.dataset} with {num_classes} classes. Image dimensions: {image_dims}")
     
@@ -143,7 +146,7 @@ def train(args):
         print(f'Saved final Boosting model to {final_model_path}')
         
         return
-    elif isinstance(model, ResNet):
+    elif isinstance(model, (ResNet, CNN)):
         # Special training for ResNet
         global_step = train_resnet(
             args=args,

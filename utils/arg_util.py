@@ -34,7 +34,7 @@ class Args(Tap):
     weak_learner_type: str = 'nn'  # Type of weak learner in boosting (choices: cnn, nn, linear)
 
     def process_args(self):
-        if self.model not in ['logistic', 'boosting', 'resnet', 'vit']:
+        if self.model not in ['logistic', 'boosting', 'resnet', 'vit', 'cnn']:
             raise ValueError(f"Model {self.model} not supported")
         
         if self.dataset != 'cifar10':

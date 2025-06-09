@@ -1,0 +1,67 @@
+Epoch [0], last_lr: 0.00053, train_loss: 1.7040, val_loss: 1.5405, val_acc: 0.4380
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 49 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+Epoch [1], last_lr: 0.00060, train_loss: 1.2365, val_loss: 1.2702, val_acc: 0.5525
+Epoch [2], last_lr: 0.00073, train_loss: 0.9867, val_loss: 1.3050, val_acc: 0.5746
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 98 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 147 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+Epoch [3], last_lr: 0.00091, train_loss: 0.8321, val_loss: 0.8907, val_acc: 0.6906
+[34m[1mwandb[0m: [33mWARNING[0m Tried to log to step 196 that is less than the current step 4901. Steps must be monotonically increasing, so this data will be ignored. See https://wandb.me/define-metric to log data out of order.
+Epoch [4], last_lr: 0.00114, train_loss: 0.7187, val_loss: 0.8719, val_acc: 0.7063
+Traceback (most recent call last):
+  File "/home/inspur/cth/PRML-Final/train.py", line 248, in <module>
+    train(args)
+  File "/home/inspur/cth/PRML-Final/train.py", line 148, in train
+    global_step = train_resnet(
+                  ^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 231, in train_resnet
+    loss = model.training_step(batch)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 64, in training_step
+    out = self(images) # Generate predictions
+          ^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 156, in forward
+    out = self.stage1(out)
+          ^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/models/resnet.py", line 29, in forward
+    out = self.conv1(x)
+          ^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/container.py", line 240, in forward
+    input = module(input)
+            ^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1751, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1762, in _call_impl
+    return forward_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/inspur/cth/PRML-Final/.venv/lib/python3.12/site-packages/torch/nn/modules/activation.py", line 733, in forward
+    def forward(self, input: Tensor) -> Tensor:
+
+KeyboardInterrupt

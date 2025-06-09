@@ -1,0 +1,238 @@
+_action_groups:
+    value:
+        - <argparse._ArgumentGroup object at 0x725bf5d07fb0>
+        - <argparse._ArgumentGroup object at 0x725bf5d2c050>
+_actions:
+    value:
+        - _StoreAction(option_strings=['--project_name'], dest='project_name', nargs=None, const=None, default='prml-final', type=<class 'str'>, choices=None, required=False, help='(str, default=prml-final) ', metavar=None)
+        - _StoreAction(option_strings=['--exp_name'], dest='exp_name', nargs=None, const=None, default='default_experiment', type=<class 'str'>, choices=None, required=False, help='(str, default=default_experiment) Name of the experiment, used for logging and saving checkpoints.', metavar=None)
+        - _StoreAction(option_strings=['--dataset'], dest='dataset', nargs=None, const=None, default='cifar10', type=<class 'str'>, choices=None, required=False, help='(str, default=cifar10) Dataset to use. Currently only cifar10 is supported.', metavar=None)
+        - '_StoreAction(option_strings=[''--model''], dest=''model'', nargs=None, const=None, default=''resnet'', type=<class ''str''>, choices=None, required=False, help=''(str, default=resnet) Model architecture (choices: logistic, boosting, resnet, vit)'', metavar=None)'
+        - _StoreAction(option_strings=['--ep'], dest='ep', nargs=None, const=None, default=400, type=<class 'int'>, choices=None, required=False, help='(int, default=400) Number of epochs', metavar=None)
+        - _StoreAction(option_strings=['--tblr'], dest='tblr', nargs=None, const=None, default=0.0001, type=<class 'float'>, choices=None, required=False, help='(float, default=0.0001) Initial learning rate for bs = 1024', metavar=None)
+        - _StoreAction(option_strings=['--max_lr'], dest='max_lr', nargs=None, const=None, default=0.01, type=<class 'float'>, choices=None, required=False, help='(float, default=0.01) Used in the ResNet training phase for One Cycle Learning Rate Policy scheduler', metavar=None)
+        - _StoreAction(option_strings=['--weight_decay'], dest='weight_decay', nargs=None, const=None, default=0.0001, type=<class 'float'>, choices=None, required=False, help='(float, default=0.0001) Used for ResNet lr scheduling', metavar=None)
+        - _StoreAction(option_strings=['--bs'], dest='bs', nargs=None, const=None, default=1024, type=<class 'int'>, choices=None, required=False, help='(int, default=1024) Batch size', metavar=None)
+        - _StoreAction(option_strings=['--bs_base'], dest='bs_base', nargs=None, const=None, default=1024, type=<class 'int'>, choices=None, required=False, help='(int, default=1024) Base batch size for scaling learning rate', metavar=None)
+        - _StoreAction(option_strings=['--log_per_iter'], dest='log_per_iter', nargs=None, const=None, default=10, type=<class 'int'>, choices=None, required=False, help='(int, default=10) Log training progress every N iterations', metavar=None)
+        - _StoreAction(option_strings=['--save_per_iter'], dest='save_per_iter', nargs=None, const=None, default=1000, type=<class 'int'>, choices=None, required=False, help='(int, default=1000) Save model checkpoint every N iterations (0 to disable)', metavar=None)
+        - _StoreAction(option_strings=['--save_path'], dest='save_path', nargs=None, const=None, default='ckpts', type=<class 'str'>, choices=None, required=False, help='(str, default=ckpts) Path to save checkpoints', metavar=None)
+        - _StoreAction(option_strings=['--num_workers'], dest='num_workers', nargs=None, const=None, default=2, type=<class 'int'>, choices=None, required=False, help='(int, default=2) Number of dataloader workers', metavar=None)
+        - _StoreAction(option_strings=['--device'], dest='device', nargs=None, const=None, default='cuda', type=<class 'str'>, choices=None, required=False, help='(str, default=cuda) Device to train on', metavar=None)
+        - _StoreAction(option_strings=['--num_estimators'], dest='num_estimators', nargs=None, const=None, default=20, type=<class 'int'>, choices=None, required=False, help='(int, default=20) Number of weak learners in boosting', metavar=None)
+        - _StoreAction(option_strings=['--boosting_ep'], dest='boosting_ep', nargs=None, const=None, default=50, type=<class 'int'>, choices=None, required=False, help='(int, default=50) Number of epochs for each weak learner in boosting', metavar=None)
+        - '_StoreAction(option_strings=[''--weak_learner_type''], dest=''weak_learner_type'', nargs=None, const=None, default=''nn'', type=<class ''str''>, choices=None, required=False, help=''(str, default=nn) Type of weak learner in boosting (choices: cnn, nn, linear)'', metavar=None)'
+        - _HelpAction(option_strings=['-h', '--help'], dest='help', nargs=0, const=None, default='==SUPPRESS==', type=None, choices=None, required=False, help='show this help message and exit', metavar=None)
+_annotations:
+    value:
+        boosting_ep: builtins.int
+        bs: builtins.int
+        bs_base: builtins.int
+        dataset: builtins.str
+        device: builtins.str
+        ep: builtins.int
+        exp_name: builtins.str
+        log_per_iter: builtins.int
+        max_lr: builtins.float
+        model: builtins.str
+        num_estimators: builtins.int
+        num_workers: builtins.int
+        project_name: builtins.str
+        save_path: builtins.str
+        save_per_iter: builtins.int
+        tblr: builtins.float
+        weak_learner_type: builtins.str
+        weight_decay: builtins.float
+_explicit_bool:
+    value: false
+_has_negative_number_optionals:
+    value: []
+_initialized:
+    value: true
+_mutually_exclusive_groups:
+    value: []
+_negative_number_matcher:
+    value: re.compile('^-\\d+$|^-\\d*\\.\\d+$')
+_option_string_actions:
+    value:
+        --boosting_ep: _StoreAction(option_strings=['--boosting_ep'], dest='boosting_ep', nargs=None, const=None, default=50, type=<class 'int'>, choices=None, required=False, help='(int, default=50) Number of epochs for each weak learner in boosting', metavar=None)
+        --bs: _StoreAction(option_strings=['--bs'], dest='bs', nargs=None, const=None, default=1024, type=<class 'int'>, choices=None, required=False, help='(int, default=1024) Batch size', metavar=None)
+        --bs_base: _StoreAction(option_strings=['--bs_base'], dest='bs_base', nargs=None, const=None, default=1024, type=<class 'int'>, choices=None, required=False, help='(int, default=1024) Base batch size for scaling learning rate', metavar=None)
+        --dataset: _StoreAction(option_strings=['--dataset'], dest='dataset', nargs=None, const=None, default='cifar10', type=<class 'str'>, choices=None, required=False, help='(str, default=cifar10) Dataset to use. Currently only cifar10 is supported.', metavar=None)
+        --device: _StoreAction(option_strings=['--device'], dest='device', nargs=None, const=None, default='cuda', type=<class 'str'>, choices=None, required=False, help='(str, default=cuda) Device to train on', metavar=None)
+        --ep: _StoreAction(option_strings=['--ep'], dest='ep', nargs=None, const=None, default=400, type=<class 'int'>, choices=None, required=False, help='(int, default=400) Number of epochs', metavar=None)
+        --exp_name: _StoreAction(option_strings=['--exp_name'], dest='exp_name', nargs=None, const=None, default='default_experiment', type=<class 'str'>, choices=None, required=False, help='(str, default=default_experiment) Name of the experiment, used for logging and saving checkpoints.', metavar=None)
+        --help: _HelpAction(option_strings=['-h', '--help'], dest='help', nargs=0, const=None, default='==SUPPRESS==', type=None, choices=None, required=False, help='show this help message and exit', metavar=None)
+        --log_per_iter: _StoreAction(option_strings=['--log_per_iter'], dest='log_per_iter', nargs=None, const=None, default=10, type=<class 'int'>, choices=None, required=False, help='(int, default=10) Log training progress every N iterations', metavar=None)
+        --max_lr: _StoreAction(option_strings=['--max_lr'], dest='max_lr', nargs=None, const=None, default=0.01, type=<class 'float'>, choices=None, required=False, help='(float, default=0.01) Used in the ResNet training phase for One Cycle Learning Rate Policy scheduler', metavar=None)
+        --model: '_StoreAction(option_strings=[''--model''], dest=''model'', nargs=None, const=None, default=''resnet'', type=<class ''str''>, choices=None, required=False, help=''(str, default=resnet) Model architecture (choices: logistic, boosting, resnet, vit)'', metavar=None)'
+        --num_estimators: _StoreAction(option_strings=['--num_estimators'], dest='num_estimators', nargs=None, const=None, default=20, type=<class 'int'>, choices=None, required=False, help='(int, default=20) Number of weak learners in boosting', metavar=None)
+        --num_workers: _StoreAction(option_strings=['--num_workers'], dest='num_workers', nargs=None, const=None, default=2, type=<class 'int'>, choices=None, required=False, help='(int, default=2) Number of dataloader workers', metavar=None)
+        --project_name: _StoreAction(option_strings=['--project_name'], dest='project_name', nargs=None, const=None, default='prml-final', type=<class 'str'>, choices=None, required=False, help='(str, default=prml-final) ', metavar=None)
+        --save_path: _StoreAction(option_strings=['--save_path'], dest='save_path', nargs=None, const=None, default='ckpts', type=<class 'str'>, choices=None, required=False, help='(str, default=ckpts) Path to save checkpoints', metavar=None)
+        --save_per_iter: _StoreAction(option_strings=['--save_per_iter'], dest='save_per_iter', nargs=None, const=None, default=1000, type=<class 'int'>, choices=None, required=False, help='(int, default=1000) Save model checkpoint every N iterations (0 to disable)', metavar=None)
+        --tblr: _StoreAction(option_strings=['--tblr'], dest='tblr', nargs=None, const=None, default=0.0001, type=<class 'float'>, choices=None, required=False, help='(float, default=0.0001) Initial learning rate for bs = 1024', metavar=None)
+        --weak_learner_type: '_StoreAction(option_strings=[''--weak_learner_type''], dest=''weak_learner_type'', nargs=None, const=None, default=''nn'', type=<class ''str''>, choices=None, required=False, help=''(str, default=nn) Type of weak learner in boosting (choices: cnn, nn, linear)'', metavar=None)'
+        --weight_decay: _StoreAction(option_strings=['--weight_decay'], dest='weight_decay', nargs=None, const=None, default=0.0001, type=<class 'float'>, choices=None, required=False, help='(float, default=0.0001) Used for ResNet lr scheduling', metavar=None)
+        -h: _HelpAction(option_strings=['-h', '--help'], dest='help', nargs=0, const=None, default='==SUPPRESS==', type=None, choices=None, required=False, help='show this help message and exit', metavar=None)
+_optionals:
+    value: <argparse._ArgumentGroup object at 0x725bf5d2c050>
+_parsed:
+    value: true
+_positionals:
+    value: <argparse._ArgumentGroup object at 0x725bf5d07fb0>
+_registries:
+    value:
+        action:
+            append: argparse._AppendAction
+            append_const: argparse._AppendConstAction
+            count: argparse._CountAction
+            extend: argparse._ExtendAction
+            help: argparse._HelpAction
+            "null": argparse._StoreAction
+            parsers: argparse._SubParsersAction
+            store: argparse._StoreAction
+            store_const: argparse._StoreConstAction
+            store_false: argparse._StoreFalseAction
+            store_true: argparse._StoreTrueAction
+            version: argparse._VersionAction
+        type:
+            "null": argparse.ArgumentParser.__init__.<locals>.identity
+_subparser_buffer:
+    value: []
+_subparsers:
+    value: null
+_underscores_to_dashes:
+    value: false
+_wandb:
+    value:
+        cli_version: 0.20.1
+        m: []
+        python_version: 3.12.7
+        t:
+            "1":
+                - 1
+                - 41
+            "2":
+                - 1
+                - 41
+            "3":
+                - 13
+                - 14
+                - 16
+                - 55
+                - 61
+            "4": 3.12.7
+            "5": 0.20.1
+            "12": 0.20.1
+            "13": linux-x86_64
+add_help:
+    value: true
+allow_abbrev:
+    value: true
+args_from_configs:
+    value: []
+argument_buffer:
+    value:
+        help:
+            - - -h
+              - --help
+            - action: help
+              default: ==SUPPRESS==
+              help: show this help message and exit
+argument_default:
+    value: null
+boosting_ep:
+    value: 50
+bs:
+    value: 1024
+bs_base:
+    value: 1024
+class_variables:
+    value:
+        boosting_ep:
+            comment: Number of epochs for each weak learner in boosting
+        bs:
+            comment: Batch size
+        bs_base:
+            comment: Base batch size for scaling learning rate
+        dataset:
+            comment: Dataset to use. Currently only cifar10 is supported.
+        device:
+            comment: Device to train on
+        ep:
+            comment: Number of epochs
+        exp_name:
+            comment: Name of the experiment, used for logging and saving checkpoints.
+        log_per_iter:
+            comment: Log training progress every N iterations
+        max_lr:
+            comment: Used in the ResNet training phase for One Cycle Learning Rate Policy scheduler
+        model:
+            comment: 'Model architecture (choices: logistic, boosting, resnet, vit)'
+        num_estimators:
+            comment: Number of weak learners in boosting
+        num_workers:
+            comment: Number of dataloader workers
+        project_name:
+            comment: ""
+        save_path:
+            comment: Path to save checkpoints
+        save_per_iter:
+            comment: Save model checkpoint every N iterations (0 to disable)
+        tblr:
+            comment: Initial learning rate for bs = 1024
+        weak_learner_type:
+            comment: 'Type of weak learner in boosting (choices: cnn, nn, linear)'
+        weight_decay:
+            comment: Used for ResNet lr scheduling
+conflict_handler:
+    value: error
+dataset:
+    value: cifar10
+description:
+    value: null
+device:
+    value: cuda
+ep:
+    value: 100
+epilog:
+    value: null
+exit_on_error:
+    value: true
+exp_name:
+    value: resnet-ep100-20-layers-data-augmentation
+extra_args:
+    value: []
+formatter_class:
+    value: argparse.HelpFormatter
+fromfile_prefix_chars:
+    value: null
+log_per_iter:
+    value: 10
+max_lr:
+    value: 0.01
+model:
+    value: resnet
+num_estimators:
+    value: 20
+num_workers:
+    value: 2
+prefix_chars:
+    value: '-'
+prog:
+    value: train.py
+project_name:
+    value: prml-final
+save_path:
+    value: ./saves
+save_per_iter:
+    value: 1000
+tblr:
+    value: 0.0001
+usage:
+    value: null
+weak_learner_type:
+    value: nn
+weight_decay:
+    value: 0.0001

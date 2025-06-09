@@ -33,6 +33,26 @@ class ResidualBlock(nn.Module):
         return out
 
 
+#########################################
+#           The Basic CNN Block         #
+#########################################
+
+class BasicBlock(nn.Module):
+    """A basic block with two convolutional layers, without residual connection."""
+
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        # The first conv_block handles the stride for downsampling
+        self.conv1 = conv_block(in_channels, out_channels, stride=stride)
+        # The second conv_block always has stride=1
+        self.conv2 = conv_block(out_channels, out_channels, stride=1)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.conv2(out)
+        return out
+
+
 #############################################
 #           The DataLoader class            #
 #############################################
@@ -162,6 +182,73 @@ class ResNet(ImageClassificationBase):
         return out
 
 
+#################################################################
+#           The CNN class (witout residual connections)         #
+#################################################################
+
+class CNN(ImageClassificationBase):
+    """
+    Configurable CNN architecture, similar to ResNet structure but without residual connections.
+    Uses BasicBlock instead of ResidualBlock.
+    """
+
+    def __init__(self, in_channels, num_classes, block_config=[3,3,3], channels_config=[64, 128, 256]):
+        super().__init__()
+
+        assert len(block_config) == 3, "block_config should have 3 elements for 3 stages."
+        assert len(channels_config) == 3, "channels_config should have 3 elements for 3 stages."
+
+        # Initial convolutional layer
+        initial_conv_out_channels = channels_config[0]
+        self.conv1 = conv_block(in_channels, initial_conv_out_channels, pool=False, stride=1)
+        
+        current_channels = initial_conv_out_channels
+
+        # Stage 1
+        self.stage1 = self._make_layer(BasicBlock, current_channels, channels_config[0], block_config[0], stride=1)
+
+        # Stage 2
+        self.stage2 = self._make_layer(BasicBlock, channels_config[0], channels_config[1], block_config[1], stride=2)
+        current_channels = channels_config[1]
+
+        # Stage 3
+        self.stage3 = self._make_layer(BasicBlock, current_channels, channels_config[2], block_config[2], stride=2)
+        current_channels = channels_config[2]
+
+        # Classifier
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(current_channels, num_classes)
+
+    def _make_layer(self, block_class, in_channels_stage, out_channels_stage, num_blocks, stride):
+        """
+        Creates a stage of basic blocks.
+        - block_class: The class of the basic block to use (e.g., BasicBlock).
+        - in_channels_stage: Input channels to the first block of this stage.
+        - out_channels_stage: Output channels from all blocks in this stage.
+        - num_blocks: Number of basic blocks in this stage.
+        - stride: Stride for the first block of this stage (for downsampling).
+        """
+        layers = []
+        # First block: handles potential downsampling (stride) and change in channel dimensions.
+        layers.append(block_class(in_channels_stage, out_channels_stage, stride=stride))
+        
+        # Subsequent blocks: maintain channel dimensions (out_channels_stage -> out_channels_stage) and use stride=1.
+        for _ in range(1, num_blocks):
+            layers.append(block_class(out_channels_stage, out_channels_stage, stride=1))
+            
+        return nn.Sequential(*layers)
+
+    def forward(self, x):
+        out = self.conv1(x)
+        out = self.stage1(out)
+        out = self.stage2(out)
+        out = self.stage3(out)
+        out = self.avgpool(out)
+        out = torch.flatten(out, 1)
+        out = self.fc(out)
+        return out
+
+
 #########################################
 #           Helper functions            #
 #########################################
@@ -214,7 +301,7 @@ def train_resnet(args, epochs, max_lr, model, train_loader, val_loader, device, 
     # Set up a custom optimizer with weight decay
     optimizer = opt_func(model.parameters(), max_lr, weight_decay=weight_decay)
     # Set up one-cycle learning rate scheduler
-    sched = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr, epochs=epochs, steps_per_epoch=len(train_loader))
+    sched = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr, div_factor=25, epochs=epochs, steps_per_epoch=len(train_loader))
 
     global_steps = 0
 

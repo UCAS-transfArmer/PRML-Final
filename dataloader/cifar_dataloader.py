@@ -57,12 +57,18 @@ def get_cifar10_dataloader(batch_size, num_workers, data_root='./data', for_vit=
     else:
         # Standard transforms for CNNs like ResNet (32x32)
         image_size = 32
-        transform_train_list = [
-            transforms.RandomCrop(image_size, padding=4, padding_mode='reflect'),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize(cifar10_mean, cifar10_std, inplace=True),
-        ]
+        if enhanced_augmentation:
+            transform_train_list = [
+                transforms.RandomCrop(image_size, padding=4, padding_mode='reflect'),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                transforms.Normalize(cifar10_mean, cifar10_std, inplace=True),
+            ]
+        else:
+            transform_train_list = [
+                transforms.ToTensor(),
+                transforms.Normalize(cifar10_mean, cifar10_std, inplace=True), # Note: inplace=True might be unexpected if you reuse the tensor. Consider removing it or being aware of its effect.
+            ]
         transform_test_list = [
             transforms.ToTensor(),
             transforms.Normalize(cifar10_mean, cifar10_std),
@@ -105,7 +111,7 @@ def get_dataloader(dataset_name, batch_size, num_workers, data_root='./data', fo
     Currently only supports CIFAR-10.
     """
     if dataset_name.lower() == 'cifar10':
-        return get_cifar10_dataloader(batch_size, num_workers, data_root, for_vit)
+        return get_cifar10_dataloader(batch_size, num_workers, data_root, for_vit, enhanced_augmentation)
     else:
         raise ValueError(f"Dataset '{dataset_name}' is not currently supported.")
 

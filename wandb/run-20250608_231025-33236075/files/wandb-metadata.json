@@ -1,0 +1,110 @@
+{
+  "os": "Linux-6.8.0-59-generic-x86_64-with-glibc2.35",
+  "python": "CPython 3.12.7",
+  "startedAt": "2025-06-08T15:10:25.796357Z",
+  "args": [
+    "--project_name",
+    "prml-final",
+    "--exp_name",
+    "resnet-ep100-32-layers-no-data-augmentation",
+    "--dataset",
+    "cifar10",
+    "--model",
+    "resnet",
+    "--ep",
+    "100",
+    "--max_lr",
+    "0.01",
+    "--weight_decay",
+    "1e-4",
+    "--save_path",
+    "./saves"
+  ],
+  "program": "/home/inspur/cth/PRML-Final/train.py",
+  "codePath": "train.py",
+  "git": {
+    "remote": "git@github.com:UCAS-transfArmer/PRML-Final.git",
+    "commit": "98ad2a9a4acfd66f64a73490c86d4e3b1e36ce3f"
+  },
+  "email": "ericguoxy@gmail.com",
+  "root": "/home/inspur/cth/PRML-Final",
+  "host": "NF5688A7",
+  "executable": "/home/inspur/cth/PRML-Final/.venv/bin/python3",
+  "codePathLocal": "train.py",
+  "cpu_count": 96,
+  "cpu_count_logical": 192,
+  "gpu": "NVIDIA H20-3e",
+  "gpu_count": 8,
+  "disk": {
+    "/": {
+      "total": "1888525799424",
+      "used": "1388293373952"
+    }
+  },
+  "memory": {
+    "total": "1622918602752"
+  },
+  "cpu": {
+    "count": 96,
+    "countLogical": 192
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-c00692c7-4eb6-38b7-1d5f-51bdf805da16"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-2f95c558-3654-03b5-4484-ab29022915b5"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-c8b4da76-325d-6a1e-7f4c-cd28dffc3e65"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-c3417bb3-85f0-ad2f-b125-74c0b47416b4"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-16ccc636-d715-2e70-9e15-71d73327a581"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-99dc342c-a97c-c5c7-e62b-8e548f5fbf48"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-c7433a98-128a-25e8-8358-f69e5a5b701a"
+    },
+    {
+      "name": "NVIDIA H20-3e",
+      "memoryTotal": "150754820096",
+      "cudaCores": 9984,
+      "architecture": "Hopper",
+      "uuid": "GPU-2cfd4efa-be9c-6d9a-5964-cd678ad3be51"
+    }
+  ],
+  "cudaVersion": "12.8"
+}

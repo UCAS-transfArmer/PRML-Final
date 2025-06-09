@@ -1,0 +1,20 @@
+{"time":"2025-06-07T20:02:57.722565025+08:00","level":"INFO","msg":"stream: starting","core version":"0.20.1","symlink path":"/home/inspur/cth/PRML-Final/wandb/run-20250607_200257-91931365/logs/debug-core.log"}
+{"time":"2025-06-07T20:02:58.342457811+08:00","level":"INFO","msg":"stream: created new stream","id":"91931365"}
+{"time":"2025-06-07T20:02:58.342533576+08:00","level":"INFO","msg":"stream: started","id":"91931365"}
+{"time":"2025-06-07T20:02:58.34255796+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"91931365"}
+{"time":"2025-06-07T20:02:58.342574094+08:00","level":"INFO","msg":"sender: started","stream_id":"91931365"}
+{"time":"2025-06-07T20:02:58.342590616+08:00","level":"INFO","msg":"handler: started","stream_id":"91931365"}
+{"time":"2025-06-07T20:02:59.194929796+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-06-07T20:03:05.848335773+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":49,"current":4901}
+{"time":"2025-06-07T20:03:11.78875098+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":98,"current":4901}
+{"time":"2025-06-07T20:03:17.75928911+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":147,"current":4901}
+{"time":"2025-06-07T20:03:23.734809103+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":196,"current":4901}
+{"time":"2025-06-07T20:03:29.727628831+08:00","level":"WARN","msg":"handler: ignoring partial history record","step":245,"current":4901}
+{"time":"2025-06-07T20:03:33.536464088+08:00","level":"INFO","msg":"stream: closing","id":"91931365"}
+{"time":"2025-06-07T20:03:33.536527561+08:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2025-06-07T20:03:33.536579047+08:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2025-06-07T20:03:34.470394613+08:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2025-06-07T20:03:34.974736147+08:00","level":"INFO","msg":"handler: closed","stream_id":"91931365"}
+{"time":"2025-06-07T20:03:34.974773722+08:00","level":"INFO","msg":"sender: closed","stream_id":"91931365"}
+{"time":"2025-06-07T20:03:34.974765271+08:00","level":"INFO","msg":"writer: Close: closed","stream_id":"91931365"}
+{"time":"2025-06-07T20:03:34.975009267+08:00","level":"INFO","msg":"stream: closed","id":"91931365"}

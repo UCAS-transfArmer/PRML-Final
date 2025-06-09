@@ -1,0 +1,13 @@
+{"time":"2025-06-09T00:50:48.049423441+08:00","level":"INFO","msg":"stream: starting","core version":"0.20.1","symlink path":"/home/inspur/cth/PRML-Final/wandb/run-20250609_005047-23980865/logs/debug-core.log"}
+{"time":"2025-06-09T00:50:48.677932383+08:00","level":"INFO","msg":"stream: created new stream","id":"23980865"}
+{"time":"2025-06-09T00:50:48.678007798+08:00","level":"INFO","msg":"stream: started","id":"23980865"}
+{"time":"2025-06-09T00:50:48.678033803+08:00","level":"INFO","msg":"writer: Do: started","stream_id":"23980865"}
+{"time":"2025-06-09T00:50:48.678051435+08:00","level":"INFO","msg":"sender: started","stream_id":"23980865"}
+{"time":"2025-06-09T00:50:48.678080984+08:00","level":"INFO","msg":"handler: started","stream_id":"23980865"}
+{"time":"2025-06-09T00:50:49.456009106+08:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2025-06-09T00:59:04.500743083+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-06-09T00:59:36.635977357+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
+{"time":"2025-06-09T00:59:57.534744581+08:00","level":"INFO","msg":"stream: closing","id":"23980865"}
+{"time":"2025-06-09T01:00:11.314046951+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)"}
+{"time":"2025-06-09T01:00:37.17567309+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/files/ericguoxy-ucas/prml-final/23980865/file_stream\": EOF"}
+{"time":"2025-06-09T01:00:50.895295381+08:00","level":"INFO","msg":"api: retrying error","error":"Post \"https://api.wandb.ai/graphql\": context deadline exceeded"}
