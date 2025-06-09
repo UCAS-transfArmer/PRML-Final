@@ -12,7 +12,7 @@ def get_cifar10_dataloader(
     for_vit=True,
     image_size=224,
     crop_padding=28,
-    enhanced_augmentation=False
+    enhanced_augmentation=True
 ):
     """
     创建 CIFAR-10 数据加载器
@@ -109,7 +109,7 @@ def get_cifar10_dataloader(
 def get_imagenet_dataloader(
     batch_size=256,  # 与 pretrain_vit_imagenet.sh 中的 --bs 对齐
     num_workers=8,   # 与 pretrain_vit_imagenet.sh 中的 --num_workers 对齐
-    data_root='./data/imagenet',
+    data_root='./data/imagenet', # 这是 get_dataloader 传递过来的 imagenet_root
     for_vit=True,
     image_size=224,  # 与 pretrain_vit_imagenet.sh 中的 --image_size 对齐
     crop_ratio=0.875,  # 标准 ImageNet 裁剪比例
@@ -120,7 +120,7 @@ def get_imagenet_dataloader(
     Args:
         batch_size (int): 批次大小
         num_workers (int): 数据加载线程数
-        data_root (str): 数据集根目录
+        data_root (str): 数据集根目录 (例如 './data/imagenet')
         for_vit (bool): 是否使用 ViT 专用的数据增强
         image_size (int): 输入图像大小，用于 ViT
         crop_ratio (float): 中心裁剪的比例
@@ -131,26 +131,30 @@ def get_imagenet_dataloader(
     std = (0.229, 0.224, 0.225)
     
     # 检查数据目录
+    # data_root 参数现在直接指向包含 train 和 val 的目录，例如 './data/imagenet'
     train_dir = os.path.join(data_root, 'train')
     val_dir = os.path.join(data_root, 'val')
     
-    if not os.path.exists(train_dir) or not os.path.exists(val_dir):
+    if not os.path.exists(train_dir) or not os.path.isdir(train_dir) or \
+       not os.path.exists(val_dir) or not os.path.isdir(val_dir):
         error_message = (
-            f"ImageNet 数据目录结构不正确。期望的根目录 '{data_root}' 下应包含 'train' 和 'val' 子目录。\n"
-            f"请从 http://image-net.org 手动下载 ImageNet ILSVRC2012 数据集，\n"
-            f"并将其解压和组织成以下结构:\n"
+            f"ImageNet 数据目录结构不正确或未找到。\n"
+            f"期望在 '{data_root}' 目录下找到 'train' 和 'val' 子目录。\n"
+            f"这些目录应该由 'download_hf_imagenet.py' 脚本创建。\n"
+            f"请确保你已经成功运行 'python download_hf_imagenet.py' 来下载和准备 ImageNet-1k 数据集。\n"
+            f"该脚本会将数据组织成 torchvision.datasets.ImageFolder 所需的格式，例如:\n"
             f"{data_root}/\n"
             f"├── train/\n"
-            f"│   ├── n01440764/  # (类别ID，例如 tench)\n"
-            f"│   │   ├── n01440764_10026.JPEG\n"
+            f"│   ├── <类别ID_1>/\n"
+            f"│   │   ├── <图片1>.JPEG\n"
             f"│   │   └── ...\n"
-            f"│   └── ... (其他类别)\n"
+            f"│   └── <类别ID_n>/\n"
             f"└── val/\n"
-            f"    ├── n01440764/\n"
-            f"    │   ├── ILSVRC2012_val_00000293.JPEG\n"
+            f"    ├── <类别ID_1>/\n"
+            f"    │   ├── <图片1>.JPEG\n"
             f"    │   └── ...\n"
-            f"    └── ... (其他类别)\n"
-            f"有关组织验证集的脚本，请参考常见的 PyTorch ImageNet 示例。"
+            f"    └── <类别ID_n>/\n"
+            f"如果已运行下载脚本，请检查 '{train_dir}' 和 '{val_dir}' 是否确实存在且包含数据。"
         )
         raise ValueError(error_message)
     
@@ -233,8 +237,6 @@ def get_imagenet_dataloader(
     return trainloader, testloader, 1000, (3, image_size, image_size)
 
 
-
-
 def get_dataloader(
     dataset_name, 
     batch_size, 
@@ -274,11 +276,12 @@ def get_dataloader(
         )
     elif dataset_name.lower() == 'imagenet':
         # ImageNet 数据目录结构通常不同
-        imagenet_root = os.path.join(data_root, 'imagenet')
+        # download_hf_imagenet.py 会在 data_root (例如 ./data) 下创建 imagenet 子目录
+        imagenet_actual_root = os.path.join(data_root, 'imagenet')
         return get_imagenet_dataloader(
             batch_size,
             num_workers,
-            imagenet_root,
+            imagenet_actual_root, # 传递 ./data/imagenet 给 get_imagenet_dataloader
             for_vit,
             image_size,
             crop_ratio=0.875,  # 标准 ImageNet 裁剪比例
@@ -286,8 +289,6 @@ def get_dataloader(
         )
     else:
         raise ValueError(f"数据集 '{dataset_name}' 暂不支持。目前仅支持 'cifar10' 和 'imagenet'。")
-
-
 
 
 if __name__ == '__main__':

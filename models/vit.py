@@ -18,13 +18,14 @@ class VisionTransformer(nn.Module):
             self, 
             image_size=224,        # 修改默认值为224
             patch_size=16,         # 修改默认值为16
-            num_classes=10,        # CIFAR-10保持不变
+            num_classes=1000,       
             dim=768,              # 修改为768
             depth=12,             # 修改为12层
             heads=12,             # 修改为12个头
             mlp_dim=3072,         # 修改为3072
-            dropout=0.1,
-            use_mlp_head=False):
+            dropout=0.0,
+            use_mlp_head=False
+        ):
         super(VisionTransformer, self).__init__()
         assert image_size % patch_size == 0, "Image size must be divisible by patch size" 
         

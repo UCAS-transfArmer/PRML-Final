@@ -6,13 +6,14 @@ import time
 import datetime
 from tqdm.auto import tqdm
 
-from utils.arg_util import get_args
-from dataloader.dataloader import get_dataloader
-from utils import wandb_utils
-from utils.scheduler import create_scheduler
-from models import VisionTransformer
+from utils.arg_util import get_args, Args 
+from dataloader.dataloader import get_dataloader 
+from utils.debug_data_util import get_debug_dataloaders 
 
-# --- 混合精度 ---
+from utils import wandb_utils
+from utils.scheduler import create_scheduler 
+from models import VisionTransformer 
+
 from torch.cuda.amp import GradScaler, autocast
 
 # --- 可选：分布式训练 ---
@@ -21,6 +22,10 @@ from torch.cuda.amp import GradScaler, autocast
 
 def get_model_for_pretrain(args, num_classes, image_dims):
     """获取用于预训练的模型实例"""
+    # 确保 image_dims 是 (C, H, W)
+    # VisionTransformer 可能不直接使用 image_dims[0] 作为通道数，
+    # 如果它内部硬编码为3或有其他方式确定。
+    # 如果需要，可以修改 VisionTransformer 以接受 channels 参数。
     model = VisionTransformer(
         image_size=args.image_size,
         patch_size=args.patch_size,
@@ -31,8 +36,11 @@ def get_model_for_pretrain(args, num_classes, image_dims):
         mlp_dim=args.mlp_dim,
         dropout=args.dropout,
         use_mlp_head=getattr(args, 'use_mlp_head', False)
+        # channels=image_dims[0] # 如果模型支持，可以这样传递通道数
     )
     return model
+
+
 
 def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_amp=False):
     """在 ImageNet 验证集上评估预训练模型"""
@@ -53,7 +61,7 @@ def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
             
-            total_loss += loss.item() * inputs.size(0)
+            total_loss += loss.item() * inputs.size(0) # 乘以 batch size
             
             _, predicted_top1 = torch.max(outputs, 1)
             correct_top1 += (predicted_top1 == labels).sum().item()
@@ -69,7 +77,7 @@ def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_
                 'top1_acc': f'{100.0*correct_top1/total_samples:.2f}%' if total_samples > 0 else '0.00%',
                 'top5_acc': f'{100.0*correct_top5/total_samples:.2f}%' if total_samples > 0 else '0.00%'
             })
-
+    pbar.close() # 确保关闭进度条
     avg_loss = total_loss / total_samples if total_samples > 0 else 0.0
     accuracy_top1 = 100.0 * correct_top1 / total_samples if total_samples > 0 else 0.0
     accuracy_top5 = 100.0 * correct_top5 / total_samples if total_samples > 0 else 0.0
@@ -78,46 +86,64 @@ def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_
     print(f'{epoch_str}ImageNet Val Set: Avg. Loss: {avg_loss:.4f}, Top-1 Acc: {accuracy_top1:.2f}%, Top-5 Acc: {accuracy_top5:.2f}%')
     return avg_loss, accuracy_top1, accuracy_top5
 
+
+
 def pretrain_imagenet(args):
     """在ImageNet上预训练模型的主函数"""
     device = torch.device(args.device)
     print(f"\n设备配置: 实际使用 {device}")
-    if device.type == 'cuda': print(f"- GPU型号: {torch.cuda.get_device_name(0)}")
-    torch.backends.cudnn.benchmark = True
+    if device.type == 'cuda' and torch.cuda.is_available(): # 增加检查cuda是否可用
+        # 假设 args.device 是 "cuda" 或 "cuda:0" 等
+        try:
+            gpu_id = torch.cuda.current_device() if ':' not in args.device else int(args.device.split(':')[-1])
+            print(f"- GPU型号: {torch.cuda.get_device_name(gpu_id)}")
+        except Exception as e:
+            print(f"获取GPU型号失败: {e}")
+
+    torch.backends.cudnn.benchmark = True # 如果输入大小不变，可以加速训练
     use_amp = getattr(args, 'use_amp', False)
     if use_amp:
         print("使用混合精度训练 (AMP)")
 
     # --- 数据加载 ---
-    print(f"为预训练加载数据集: {args.dataset} (应为 imagenet)")
-    trainloader, testloader, num_classes, image_dims = get_dataloader(
-        dataset_name=args.dataset,
-        batch_size=args.bs,
-        num_workers=args.num_workers,
-        data_root=args.data_root,
-        for_vit=(args.model.lower()=='vit'),
-        enhanced_augmentation=args.enhanced_augmentation,
-        image_size=args.image_size
-    )
-    if args.dataset.lower() == 'imagenet' and num_classes != 1000:
-        print(f"警告: 数据加载器为ImageNet返回的类别数为 {num_classes}，期望为1000。请检查dataloader实现。")
-
+    if getattr(args, 'debug_use_fake_data', False): # 检查新的调试标志
+        trainloader, testloader, num_classes, image_dims = get_debug_dataloaders(args)
+    else:
+        # 原始的真实数据加载逻辑
+        print(f"为预训练加载数据集: {args.dataset}")
+        trainloader, testloader, num_classes, image_dims = get_dataloader(
+            dataset_name=args.dataset,
+            batch_size=args.bs,
+            num_workers=args.num_workers,
+            data_root=args.data_root,
+            for_vit=(args.model.lower()=='vit'), # 假设您的 get_dataloader 需要这个
+            enhanced_augmentation=args.enhanced_augmentation,
+            image_size=args.image_size,
+            # 如果 get_dataloader 需要 ImageNet 子集参数，请确保传递它们
+            ##################-----------------######################
+        )
+        # 数据加载后的验证检查
+        if args.dataset.lower() == 'imagenet':
+            expected_classes = 1000  # ImageNet-1K has 1000 classes
+            if num_classes != expected_classes:
+                print(f"警告: 数据加载器为ImageNet返回的类别数为 {num_classes}，期望为 {expected_classes}。")
+                print(f"请检查dataloader实现或数据完整性。")
+    
     # --- 模型 ---
+    # image_dims 应该是 (C, H, W) 格式
     model_unwrapped = get_model_for_pretrain(args, num_classes, image_dims)
-    # model = model.to(device) # 原来的方式
 
     # --- DataParallel 修改开始 ---
     if args.use_data_parallel and torch.cuda.is_available() and torch.cuda.device_count() > 1:
         print(f"检测到 {torch.cuda.device_count()} 个 GPUs。启用 nn.DataParallel。")
-        # DataParallel 会将数据分发到所有可见的CUDA设备，并将模型复制到每个设备上。
-        # 主设备（通常是args.device指定的，例如cuda:0）会收集结果。
         model = nn.DataParallel(model_unwrapped) # 包装模型
     else:
         model = model_unwrapped
+        if args.use_data_parallel and (not torch.cuda.is_available() or torch.cuda.device_count() <= 1):
+            print("请求了DataParallel，但条件不满足（无可用GPU/只有一个GPU）。在单个设备上运行。")
     # --- DataParallel 修改结束 ---
 
     model = model.to(device) # 将模型（或DataParallel包装器）移动到主设备
-                             # DataParallel 会处理其他GPU上的模型副本
 
     total_params_unwrapped = sum(p.numel() for p in model_unwrapped.parameters() if p.requires_grad)
     print(f"模型参数量 (预训练, 未包装): {total_params_unwrapped:,}")
@@ -125,24 +151,33 @@ def pretrain_imagenet(args):
 
     # --- 损失函数和优化器 ---
     criterion = nn.CrossEntropyLoss()
-    # 如果使用DataParallel，优化器仍然作用于原始模型参数
-    # 但通常我们直接将包装后的模型传入，PyTorch会处理
     optimizer = optim.AdamW(
-        model.parameters(), # 直接使用 model.parameters() 即可
-        lr=args.warmup_start_lr,
+        model.parameters(), 
+        lr=args.lr, # 使用 args.lr 作为初始学习率，调度器会处理 warmup_start_lr
         weight_decay=args.weight_decay,
-        betas=(0.9, 0.999)
+        betas=(0.9, 0.999) # AdamW 常用 beta 值
     )
-    scheduler = create_scheduler(optimizer, args)
+    # 确保 create_scheduler 能够处理 warmup_start_lr
+    scheduler = create_scheduler(optimizer, args) # 假设 args 包含 warmup_start_lr, warmup_epochs, min_lr 等
     scaler = GradScaler(enabled=use_amp)
 
     # --- W&B 初始化 ---
-    wandb_utils.initialize(
-        args,
-        exp_name=args.exp_name if args.exp_name else f"{args.model}_{args.dataset}_pretrain",
-        project_name=args.project_name,
-        model=model_unwrapped # 建议 watch 未包装的模型以获得更清晰的图结构
-    )
+    # 确保 wandb_utils.initialize 和 wandb_utils.log 等函数存在且功能正确
+    if getattr(args, 'use_wandb', True): # 假设 args 中有 use_wandb 字段，默认为 True
+        try:
+            wandb_utils.initialize(
+                args, # 传递整个 args 对象
+                exp_name=args.exp_name if args.exp_name else f"{args.model}_{args.dataset}_pretrain_debug_fake" if args.debug_use_fake_data else f"{args.model}_{args.dataset}_pretrain",
+                project_name=args.project_name,
+                model=model_unwrapped # watch 未包装的模型
+            )
+            print("WandB初始化成功。")
+        except Exception as e:
+            print(f"WandB初始化失败: {e}。将禁用WandB。")
+            args.use_wandb = False # 出错则禁用
+    else:
+        print("WandB被禁用。")
+
 
     best_val_top1_acc = 0.0
     start_time = time.time()
@@ -157,47 +192,50 @@ def pretrain_imagenet(args):
             epoch_start_time = time.time()
 
             print(f"\nEpoch {epoch+1}/{args.ep}")
+            # 使用 unit='batch' 使进度条更清晰
             pbar = tqdm(trainloader, desc=f'Pre-training Epoch {epoch+1}', leave=False, ncols=100, unit='batch')
 
             for i, (inputs, labels) in enumerate(pbar):
                 inputs, labels = inputs.to(device, non_blocking=True), labels.to(device, non_blocking=True)
 
-                optimizer.zero_grad(set_to_none=True)
+                optimizer.zero_grad(set_to_none=True) # set_to_none=True 可以提高性能
 
-                with autocast(enabled=use_amp): # 使用 autocast
+                with autocast(enabled=use_amp):
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
                 
-                scaler.scale(loss).backward() # 使用 scaler 缩放损失并反向传播
+                scaler.scale(loss).backward()
 
                 if args.grad_clip_norm is not None and args.grad_clip_norm > 0:
-                    scaler.unscale_(optimizer) # 在裁剪前 unscale 梯度
+                    scaler.unscale_(optimizer) 
                     torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.grad_clip_norm)
                 
-                scaler.step(optimizer) # scaler.step 会自动 unscale 梯度并调用 optimizer.step
-                scaler.update() # 更新 scaler 的缩放因子
+                scaler.step(optimizer)
+                scaler.update()
 
-                running_loss_epoch += loss.item() * inputs.size(0)
+                running_loss_epoch += loss.item() * inputs.size(0) # 乘以 batch size
                 _, predicted = torch.max(outputs, 1)
                 total_train_epoch += labels.size(0)
                 correct_train_epoch += (predicted == labels).sum().item()
                 
                 current_lr = optimizer.param_groups[0]['lr']
                 pbar.set_postfix({
-                    'loss': f'{loss.item():.4f}',
+                    'loss': f'{loss.item():.4f}', # 当前迭代的损失
                     'lr': f'{current_lr:.2e}',
                     'acc_train': f'{100.0 * correct_train_epoch / total_train_epoch:.2f}%' if total_train_epoch > 0 else '0.00%'
                 })
 
-                if (i+1) % args.log_per_iter == 0:
+                # WandB 日志记录迭代级别的信息
+                if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized() and (i+1) % args.log_per_iter == 0 :
                     iter_log_data = {
                         "pretrain/iter_loss": loss.item(),
                         "pretrain/lr": current_lr,
-                        "epoch": epoch + 1,
+                        "pretrain/epoch_progress": epoch + (i+1)/len(trainloader), # 更精细的epoch进度
                     }
-                    wandb_utils.log(iter_log_data, step=epoch * len(trainloader) + i)
+                    # 确保 wandb_utils.log 存在
+                    wandb_utils.log(iter_log_data) # 移除了 step 参数，让 wandb 自动处理或在 log_epoch_metrics 中统一处理
             
-            pbar.close()
+            pbar.close() # 确保关闭进度条
             avg_train_loss = running_loss_epoch / total_train_epoch if total_train_epoch > 0 else 0.0
             avg_train_acc = 100.0 * correct_train_epoch / total_train_epoch if total_train_epoch > 0 else 0.0
             
@@ -205,93 +243,88 @@ def pretrain_imagenet(args):
 
             # --- 评估 ---
             val_loss, val_top1_acc, val_top5_acc = evaluate_pretrain(
-                model, testloader, criterion, device, epoch_num=epoch + 1, use_amp=use_amp
+                model, 
+                testloader, 
+                criterion, 
+                device, 
+                epoch_num=epoch + 1, 
+                use_amp=use_amp
             )
 
-            wandb_utils.log_epoch_metrics(
-                epoch + 1, 
-                avg_train_loss, 
-                val_loss, 
-                val_top1_acc, 
-                optimizer.param_groups[0]['lr'],
-                val_acc_top5=val_top5_acc 
-            )
+            # WandB 日志记录 epoch 级别的信息
+            if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized():
+                # 确保 wandb_utils.log_epoch_metrics 存在
+                wandb_utils.log_epoch_metrics(
+                    epoch + 1, 
+                    avg_train_loss, 
+                    val_loss, 
+                    val_top1_acc, 
+                    optimizer.param_groups[0]['lr'], # 当前 epoch 结束时的学习率
+                    val_acc_top5=val_top5_acc,
+                    train_acc_top1=avg_train_acc # 也记录训练集准确率
+                )
 
             is_best = val_top1_acc > best_val_top1_acc
             if is_best:
                 best_val_top1_acc = val_top1_acc
                 print(f"新的最佳ImageNet Top-1验证准确率: {best_val_top1_acc:.2f}%")
 
-            if (epoch + 1) % args.save_frequency == 0 or is_best:
-                # 如果使用了 nn.DataParallel，模型状态字典的键会带有 'module.' 前缀
-                # 保存时最好保存 model.module.state_dict() 以便更容易地在单GPU或不同GPU配置上加载
+            # 保存检查点
+            if (epoch + 1) % args.save_frequency == 0 or is_best or (epoch + 1) == args.ep:
                 state_to_save = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
+                # 确保 wandb_utils.save_checkpoint 存在
                 wandb_utils.save_checkpoint(
-                    state_to_save, # 直接传递状态字典
-                    optimizer, epoch + 1, args, is_best=is_best,
-                    checkpoint_name=f"pretrain_checkpoint_epoch_{epoch+1}{'_best' if is_best else ''}.pth",
-                    # 如果需要保存scaler状态:
-                    # extra_state={'scaler': scaler.state_dict()}
+                    state_to_save, 
+                    optimizer.state_dict(), # 传递 optimizer.state_dict()
+                    scheduler.state_dict(), # 传递 scheduler.state_dict()
+                    epoch + 1, 
+                    args, 
+                    is_best=is_best,
+                    checkpoint_name=f"pretrain_ckpt_epoch_{epoch+1}{'_best' if is_best else ''}.pth",
+                    extra_state={'scaler_state_dict': scaler.state_dict()} if use_amp else None
                 )
-            # ... (scheduler.step()) ...
+            
+            scheduler.step() # 在每个 epoch 后更新学习率 (如果调度器是按epoch更新的话)
 
     except KeyboardInterrupt:
         print("\n预训练被用户中断。")
-        if 'epoch' in locals() and model is not None and optimizer is not None:
+        if 'epoch' in locals() and model is not None and optimizer is not None and scheduler is not None and scaler is not None: # 检查变量是否存在
             state_to_save = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
             wandb_utils.save_checkpoint(
-                state_to_save, optimizer, epoch + 1 if 'epoch' in locals() else 0, args, is_best=False,
-                checkpoint_name="pretrain_checkpoint_interrupted.pth"
-                # extra_state={'scaler': scaler.state_dict()} if use_amp and 'scaler' in locals() else None
+                state_to_save, 
+                optimizer.state_dict(), # 传递 optimizer.state_dict()
+                scheduler.state_dict(), # 传递 scheduler.state_dict()
+                epoch + 1 if 'epoch' in locals() else 0, 
+                args, 
+                is_best=False, # 中断时不是最佳
+                checkpoint_name="pretrain_ckpt_interrupted.pth",
+                extra_state={'scaler_state_dict': scaler.state_dict()} if use_amp else None
             )
             print("已保存中断时的检查点。")
     finally:
         print(f"\n预训练结束。总用时: {datetime.timedelta(seconds=int(time.time() - start_time))}")
-        wandb_utils.finish()
+        if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized():
+            wandb_utils.finish()
+
 
 if __name__ == '__main__':
     args = get_args()
-
-    # --- 为 ImageNet 预训练设置合理的默认参数 ---
-    args.dataset = getattr(args, 'dataset', 'imagenet')
-    args.model = getattr(args, 'model', 'vit')
     
-    args.ep = getattr(args, 'ep', 300)
-    args.bs = getattr(args, 'bs', 256) 
-    args.lr = getattr(args, 'lr', 1e-3) 
-    
-    args.warmup_epochs = getattr(args, 'warmup_epochs', 10)
-    args.warmup_start_lr = getattr(args, 'warmup_start_lr', 1e-7)
-    args.min_lr = getattr(args, 'min_lr', 1e-6)
-    args.weight_decay = getattr(args, 'weight_decay', 0.05)
-    
-    args.image_size = getattr(args, 'image_size', 224)
-    args.patch_size = getattr(args, 'patch_size', 16)
-    args.dim = getattr(args, 'dim', 768)
-    args.depth = getattr(args, 'depth', 12)
-    args.heads = getattr(args, 'heads', 12)
-    args.mlp_dim = getattr(args, 'mlp_dim', 3072)
-    args.dropout = getattr(args, 'dropout', 0.1)
-    args.use_mlp_head = getattr(args, 'use_mlp_head', False)
-
-    args.enhanced_augmentation = getattr(args, 'enhanced_augmentation', True)
-    args.grad_clip_norm = getattr(args, 'grad_clip_norm', 1.0)
-
-    args.log_per_iter = getattr(args, 'log_per_iter', 100)
-    args.save_frequency = getattr(args, 'save_frequency', 20) # 修改了这里，与你之前的文件一致
-    args.save_path = getattr(args, 'save_path', './ckpts_pretrain_imagenet')
-    args.exp_name = getattr(args, 'exp_name', f"{args.model}_imagenet_pretrain_lr{args.lr}_bs{args.bs}")
-
-    # --- AMP 参数 ---
-    args.use_amp = getattr(args, 'use_amp', True) # 默认启用混合精度训练
-
-    # --- DataParallel 参数 ---
-    # 你可以在 arg_util.py 中添加这个参数，或者在这里用 getattr
-    args.use_data_parallel = getattr(args, 'use_data_parallel', True) # 默认在多GPU时启用DataParallel
-
     print("使用以下配置运行ImageNet预训练:")
     for arg_name, value in sorted(vars(args).items()):
         print(f"  {arg_name}: {value}")
     print("-" * 30)
+
+    # 参数验证 (可选，但推荐)
+    try:
+        temp_args_for_validation = Args(**vars(args)) # 现在 Args 是已定义的
+        temp_args_for_validation.process_args()
+        print("参数验证成功。")
+    except ValueError as e:
+        print(f"参数验证失败: {e}")
+        exit(1)
+    except Exception as e:
+        print(f"解析或验证参数时发生其他错误: {e}")
+        # exit(1) 
 
     pretrain_imagenet(args)

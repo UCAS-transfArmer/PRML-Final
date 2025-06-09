@@ -141,36 +141,39 @@ def log_training_batch(loss, current_lr, global_step, log_interval=100):
         })
 
 
-def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, val_acc_top5=None): # 添加 val_acc_top5 参数
+def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, val_acc_top5=None, train_top1_acc=None): # 修正这里，匹配之前的建议
     """记录每个epoch的指标"""
     if is_main_process():
         metrics_to_log = {
-            "val/loss": val_loss,
-            "val/accuracy_top1": val_acc, # 更新名称以示区分
-            "train/avg_loss": train_loss,
-            "train/learning_rate": current_lr,
+            "val/epoch_loss": val_loss, # 使用更明确的名称
+            "val/epoch_top1_accuracy": val_acc,
+            "train/epoch_avg_loss": train_loss,
+            "train/epoch_learning_rate": current_lr,
             "epoch": epoch
         }
-        if val_acc_top5 is not None: # 如果提供了 Top-5 准确率，则记录
-            metrics_to_log["val/accuracy_top5"] = val_acc_top5
+        if val_acc_top5 is not None:
+            metrics_to_log["val/epoch_top5_accuracy"] = val_acc_top5
+        if train_top1_acc is not None: # 添加对 train_top1_acc 的记录
+            metrics_to_log["train/epoch_top1_accuracy"] = train_top1_acc
         
         log(metrics_to_log)
 
 
-def save_checkpoint(model, optimizer, epoch, args, is_best=False, checkpoint_name=None):
+def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict, epoch, args, 
+                        is_best=False, checkpoint_name=None, extra_state=None):
     """保存模型检查点"""
     if not is_main_process():
         return
         
-    # 处理 nn.DataParallel 包装的模型
-    model_state_dict_to_save = model.module.state_dict() if hasattr(model, 'module') else model.state_dict()
-
     checkpoint = {
         'epoch': epoch,
-        'model_state_dict': model_state_dict_to_save, # 使用处理后的 state_dict
-        'optimizer_state_dict': optimizer.state_dict(),
+        'model_state_dict': model_state_dict,
+        'optimizer_state_dict': optimizer_state_dict,
+        'scheduler_state_dict': scheduler_state_dict,
         'args': vars(args)
     }
+    if extra_state:
+        checkpoint.update(extra_state)
     
     # 确保保存目录存在
     os.makedirs(args.save_path, exist_ok=True)
@@ -181,16 +184,21 @@ def save_checkpoint(model, optimizer, epoch, args, is_best=False, checkpoint_nam
     
     checkpoint_path = os.path.join(args.save_path, checkpoint_name)
     torch.save(checkpoint, checkpoint_path)
+    print(f"Checkpoint saved to {checkpoint_path}") # 打印保存信息
     
     # 在指定条件下上传到wandb
-    if (epoch + 1) % args.save_frequency == 0:
-        wandb.save(checkpoint_path)
+    # 移除 (epoch + 1) % args.save_frequency == 0 的判断，因为 pretrain.py 中已经有这个判断了
+    # 只要调用 save_checkpoint，就应该尝试保存到 wandb (如果 wandb 启用)
+    if wandb.run: # 检查 wandb.run 是否存在
+        wandb.save(os.path.abspath(checkpoint_path), policy="live") # 使用 abspath 和 policy="live"
     
     # 保存最佳模型
     if is_best:
         best_path = os.path.join(args.save_path, 'best_model.pth')
         torch.save(checkpoint, best_path)
-        wandb.save(best_path)
+        print(f"Best model checkpoint saved to {best_path}") # 打印保存信息
+        if wandb.run: # 检查 wandb.run 是否存在
+            wandb.save(os.path.abspath(best_path), policy="live") # 使用 abspath 和 policy="live"
 
 
 def finish():

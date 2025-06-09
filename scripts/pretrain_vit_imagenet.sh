@@ -5,27 +5,28 @@ python pretrain.py \
     --model=vit \
     --dataset=imagenet \
     --data_root=./data \
-    --bs=256 \
+    --bs=512 \
     --ep=300 \
-    --lr=3e-4 \
+    --lr=5e-3 \
     --warmup_epochs=5 \
     --warmup_start_lr=1e-6 \
-    --min_lr=1e-6 \
+    --min_lr=1e-5 \
     --image_size=224 \
     --patch_size=16 \
     --dim=768 \
     --depth=12 \
     --heads=12 \
     --mlp_dim=3072 \
-    --dropout=0.1 \
+    --dropout=0.0 \
     --enhanced_augmentation \
     --weight_decay=0.05 \
     --grad_clip_norm=1.0 \
-    --num_workers=8 \
+    --num_workers=16 \
     --project_name=PRML-Final \
-    --exp_name=vit-base16-imagenet-pretrain \
+    --exp_name=vit-base16-imagenet-pretrain-bs512-original \
     --save_path=./ckpts/imagenet \
     --keep_n_checkpoints=2 \
     --save_frequency=20 \
     --log_per_iter=100 \
-    --use_data_parallel
+    --use_data_parallel \
+    --use_amp
