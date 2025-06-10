@@ -7,8 +7,8 @@ python pretrain.py \
     --data_root=./data \
     --bs=512 \
     --ep=300 \
-    --lr=5e-3 \
-    --warmup_epochs=5 \
+    --lr=1e-3 \
+    --warmup_epochs=10 \
     --warmup_start_lr=1e-6 \
     --min_lr=1e-5 \
     --image_size=224 \
@@ -17,9 +17,9 @@ python pretrain.py \
     --depth=12 \
     --heads=12 \
     --mlp_dim=3072 \
-    --dropout=0.0 \
+    --dropout=0.1 \
     --enhanced_augmentation \
-    --weight_decay=0.05 \
+    --weight_decay=0.03 \
     --grad_clip_norm=1.0 \
     --num_workers=16 \
     --project_name=PRML-Final \
@@ -30,3 +30,5 @@ python pretrain.py \
     --log_per_iter=100 \
     --use_data_parallel \
     --use_amp
+
+echo "脚本执行完毕。"

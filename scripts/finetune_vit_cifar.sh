@@ -14,11 +14,11 @@ python finetune.py \
     --image_size=224 \
     --bs=64 \
     --ep=50 \
-    --lr=2e-5 \
+    --lr=1e-4 \
     --warmup_epochs=5 \
     --warmup_start_lr=1e-7 \
     --min_lr=1e-6 \
-    --weight_decay=0.01 \
+    --weight_decay=0.0 \
     --head_lr_multiplier=10 \
     --grad_clip_norm=1.0 \
     --dropout=0.1 \
