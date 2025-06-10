@@ -1,9 +1,10 @@
 # PRML-Final -- ViT：
 
 
-Vision Transformer (ViT) Summary and Experimental Plan
-
 贴上原论文链接：[《AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE》](https://arxiv.org/pdf/2010.11929)
+
+这是一个：
+[论文总结](https://acnn8hqx4j1r.feishu.cn/docx/JFdIdMfCJo26OrxhkoPcOOIOnah)
 ## 做两部分实验：
 
 1.  用ViT在CIFAR-10（train+val共6万张，10类）上训练和验证：
