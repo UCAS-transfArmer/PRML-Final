@@ -10,12 +10,12 @@
 1.  用ViT在CIFAR-10（train+val共6万张，10类）上训练和验证：
     对比两组参数：
     -   一个小的ViT变体 ，6层，heads=6, dim=384, image_size=32, patch_size=4, mlp_dim=1536，参数量约11M
-        进度：跑了一次val_acc只有82%，有空再跑一次看看能不能高点
+        进度：val_acc=82%
     -   标准的ViT-base/16 ，12层，heads=12, dim=768, image_size=224, patch_size=16, mlp_dim=3072，参数量约86M，
-        进度：还在调参数
+        进度：val_acc 85%
 
 2.  用标准ViT-base/16在ImageNet-1K(train+val约128万张图片，1000类)，再在CIFAR-10上微调
-    进度：pretrain已经写好, finetune在调试
+    进度：代码基本写完
 
 ## 期望的实验结果:
 
