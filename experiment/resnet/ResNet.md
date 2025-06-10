@@ -91,6 +91,23 @@ Here are possible reasons for this phenomenon:
 ![CNN without data augmentation](./cnn_no_data_augmentation.png)
 This figure basically shows all the phenomena we discussed above. The validation accuracy is lower, peaking at around 85% due to lack of data augmentations. Also, the deeper models (CNN-32 and CNN-56) show more variance in their training and validation curves, indicating that they are harder to train.
 
-### ResNet with different learning rates
+### ResNet-32 with different learning rates
 ![ResNet different learning rates](./resnet_different_lrs.png)
 I have conducted experiments with different learning rates for the ResNet-32 model. I use the `OneCycleLR` scheduler with different `max_lr` values: 0.01, 0.05, 0.09, and 0.12. The results show that all models converges to the same final validation accuracy of around 94%. This is a sign that the ResNet architecture is robust to different learning rates, and the `OneCycleLR` scheduler is effective in finding a good learning rate for training. Also, the CIFAR-10 dataset is relatively small, so the models can fit the data well with different learning rates.
+
+To further show the effect of residual connections, I have also conducted experiments with:
+- CNN-32 with different learning rates (0.01, 0.05, 0.09, and 0.12).
+- CNN-56 with different learning rates (0.01, 0.05, 0.09, and 0.12).
+- ResNet-56 with different learning rates (0.01, 0.05, 0.09, and 0.12) without data augmentation.
+
+### CNN-32 with different learning rates (without data augmentation)
+![CNN-32 different learning rates](./cnn_32_different_lrs.png)
+As shown in the figure, the training and validation curves for the CNN-32 model contains more variance and fluctuations compared to that of ResNet-32. Also, the validation accuracy for higher learning rates (0.05, 0.09, and 0.12) is lower than that for the lower learning rate (0.01). This indicates that the CNN-32 model is more sensitive to the learning rate, and the skip connections in ResNet-32 help stabilize the training process.
+
+### CNN-56 with different learning rates (without data augmentation)
+![CNN-56 different learning rates](./cnn_56_different_lrs.png)
+The divergence of the final convergent validation accuracy for the CNN-56 model reveal that the CNN-56 model is more sensitive to the learning rate than the ResNet-56 model. The fluctuations in the `val_loss` and `val_acc` is the severest among all models, indicating the importance of skip connections in stabilizing the training process.
+
+### ResNet-56 with different learning rates (without data augmentation)
+![ResNet-56 different learning rates](./resnet_56_different_lrs.png)
+As a comparison for the CNN-56 model, the ResNet-56 model shows much less variance in the training and validation curves. The validation accuracy is around 89% for all learning rates, indicating that the ResNet-56 model is more robust to different learning rates. The skip connections in ResNet-56 help stabilize the training process and make it easier to train deeper networks.
