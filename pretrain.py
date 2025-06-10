@@ -8,13 +8,13 @@ from tqdm.auto import tqdm
 
 from utils.arg_util import get_args, Args 
 from dataloader.dataloader import get_dataloader 
-from utils.debug_data_util import get_debug_dataloaders 
+from debug_utils.debug_data_util import get_debug_dataloaders 
 
 from utils import wandb_utils
 from utils.scheduler import create_scheduler 
 from models import VisionTransformer 
 
-from torch.cuda.amp import GradScaler, autocast
+import torch.amp # Updated AMP import
 
 # --- 可选：分布式训练 ---
 # import torch.distributed as dist
@@ -57,7 +57,7 @@ def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_
         for inputs, labels in pbar:
             inputs, labels = inputs.to(device), labels.to(device)
             
-            with autocast(enabled=use_amp): # 使用 autocast 进行评估
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp): # Updated AMP API
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
             
@@ -159,7 +159,7 @@ def pretrain_imagenet(args):
     )
     # 确保 create_scheduler 能够处理 warmup_start_lr
     scheduler = create_scheduler(optimizer, args) # 假设 args 包含 warmup_start_lr, warmup_epochs, min_lr 等
-    scaler = GradScaler(enabled=use_amp)
+    scaler = torch.amp.GradScaler(enabled=use_amp) # Updated AMP API
 
     # --- W&B 初始化 ---
     # 确保 wandb_utils.initialize 和 wandb_utils.log 等函数存在且功能正确
@@ -200,7 +200,7 @@ def pretrain_imagenet(args):
 
                 optimizer.zero_grad(set_to_none=True) # set_to_none=True 可以提高性能
 
-                with autocast(enabled=use_amp):
+                with torch.amp.autocast(device_type=device.type, enabled=use_amp): # Updated AMP API
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
                 
@@ -281,7 +281,7 @@ def pretrain_imagenet(args):
                     args, 
                     is_best=is_best,
                     checkpoint_name=f"pretrain_ckpt_epoch_{epoch+1}{'_best' if is_best else ''}.pth",
-                    extra_state={'scaler_state_dict': scaler.state_dict()} if use_amp else None
+                    extra_state={'scaler_state': scaler.state_dict()} if use_amp else None # 统一键名为 scaler_state
                 )
             
             scheduler.step() # 在每个 epoch 后更新学习率 (如果调度器是按epoch更新的话)
@@ -298,7 +298,7 @@ def pretrain_imagenet(args):
                 args, 
                 is_best=False, # 中断时不是最佳
                 checkpoint_name="pretrain_ckpt_interrupted.pth",
-                extra_state={'scaler_state_dict': scaler.state_dict()} if use_amp else None
+                extra_state={'scaler_state': scaler.state_dict()} if use_amp else None # 统一键名为 scaler_state
             )
             print("已保存中断时的检查点。")
     finally:
@@ -315,16 +315,5 @@ if __name__ == '__main__':
         print(f"  {arg_name}: {value}")
     print("-" * 30)
 
-    # 参数验证 (可选，但推荐)
-    try:
-        temp_args_for_validation = Args(**vars(args)) # 现在 Args 是已定义的
-        temp_args_for_validation.process_args()
-        print("参数验证成功。")
-    except ValueError as e:
-        print(f"参数验证失败: {e}")
-        exit(1)
-    except Exception as e:
-        print(f"解析或验证参数时发生其他错误: {e}")
-        # exit(1) 
 
     pretrain_imagenet(args)

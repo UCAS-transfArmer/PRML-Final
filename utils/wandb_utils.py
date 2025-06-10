@@ -9,7 +9,6 @@ import math
 import datetime
 import time
 
-
 def is_main_process():
     # Default: single GPU
     return True
@@ -28,7 +27,7 @@ def generate_run_id(exp_name):
     return str(int(hashlib.sha256(exp_name.encode('utf-8')).hexdigest(), 16) % 10 ** 8)
 
 
-def initialize(args, exp_name, project_name, model=None):
+def initialize(args, exp_name, project_name, config,model=None):
     """初始化wandb日志记录"""
     print("初始化wandb日志...")
     
@@ -36,7 +35,7 @@ def initialize(args, exp_name, project_name, model=None):
     wandb.init(
         project=project_name,
         name=exp_name,
-        config=vars(args),
+        config=config,
         group=group,
         notes="开始训练ViT (使用优化后的学习率调度器)",
         settings=wandb.Settings(
@@ -85,6 +84,11 @@ def initialize(args, exp_name, project_name, model=None):
     
     print("wandb日志初始化成功!")
     return wandb.run
+
+
+def is_initialized():
+    """检查wandb是否已初始化"""
+    return wandb.run is not None
 
 
 def log(stats, step=None):
@@ -159,28 +163,33 @@ def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, val_acc_
         log(metrics_to_log)
 
 
-def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict, epoch, args, 
-                        is_best=False, checkpoint_name=None, extra_state=None):
-    """保存模型检查点"""
+def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict, epoch, args,
+                    is_best=False, checkpoint_name=None, extra_state=None):
+    """保存模型检查点，包括模型状态、优化器状态、调度器状态、epoch和args。"""
     if not is_main_process():
         return
         
-    checkpoint = {
-        'epoch': epoch,
-        'model_state_dict': model_state_dict,
-        'optimizer_state_dict': optimizer_state_dict,
-        'scheduler_state_dict': scheduler_state_dict,
-        'args': vars(args)
-    }
-    if extra_state:
-        checkpoint.update(extra_state)
-    
     # 确保保存目录存在
     os.makedirs(args.save_path, exist_ok=True)
     
     # 保存指定名称的检查点
     if checkpoint_name is None:
         checkpoint_name = f'checkpoint_epoch_{epoch}.pth'
+    
+    # 将 args (Tap 对象) 转换为可序列化的字典
+    # 如果 args 是 Tap 对象，vars(args) 通常就足够了，因为它会返回其 __dict__
+    # Tap 对象在设计上应该使其属性易于通过 vars() 获取
+    args_to_save = vars(args)
+
+    checkpoint = {
+        'epoch': epoch,
+        'args': args_to_save,  # 修改：保存 args 的字典表示
+        'model_state_dict': model_state_dict,
+        'optimizer_state_dict': optimizer_state_dict,
+        'scheduler_state_dict': scheduler_state_dict,
+    }
+    if extra_state:
+        checkpoint.update(extra_state)
     
     checkpoint_path = os.path.join(args.save_path, checkpoint_name)
     torch.save(checkpoint, checkpoint_path)

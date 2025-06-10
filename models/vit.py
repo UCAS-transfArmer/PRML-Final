@@ -34,12 +34,11 @@ class VisionTransformer(nn.Module):
         
         # Patch embedding
         self.patch_size = patch_size
-
         self.patch_embed = nn.Conv2d(3, dim, kernel_size=patch_size, stride=patch_size)
         self.pos_embed = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
-        self.dropout = nn.Dropout(dropout)
-        
+        # self.dropout = nn.Dropout(dropout) # Dropout 实例现在只在需要的地方创建
+
         # Transformer blocks
         self.transformer = nn.ModuleList([
             nn.ModuleList([
@@ -60,12 +59,15 @@ class VisionTransformer(nn.Module):
         # Classification head
         self.norm = nn.LayerNorm(dim)
         if use_mlp_head:
-            #MLP head(optional for pretraining or scratch)
+            #MLP Head
+            # 原论文预训练头通常是 Linear -> Activation -> Linear
+            # 这里使用一个简单的结构 Linear(dim, hidden_for_head) -> GELU -> Linear(hidden_for_head, num_classes)
+            # 为简单起见，且不引入新的超参数，可以使用 dim 作为 hidden_for_head
             self.head=nn.Sequential(
-                nn.Linear(dim,dim//2),#768->384
+                nn.Linear(dim, dim), # 或者一个特定的 mlp_head_dim
                 nn.GELU(),
-                nn.Dropout(dropout),
-                nn.Linear(dim//2,num_classes) #384->num_classes
+                # nn.Dropout(dropout), # 从 MLP 头中移除 Dropout，更贴近原论文预训练头
+                nn.Linear(dim, num_classes) 
             )
         else:
             #Linear Head(default for pretraining and Fine-tuning)
@@ -109,14 +111,19 @@ class VisionTransformer(nn.Module):
         
         # Add positional embedding
         x = x + self.pos_embed
-        x = self.dropout(x)
+        # x = self.dropout(x) # 移除此处的 Dropout
         
         # Transformer blocks
         for ln1, attn, ln2, mlp in self.transformer:
+            # 注意：在 MultiheadAttention 和 MLP 内部已经有 Dropout 了 (如果 dropout > 0)
+            x_res = x
             x = ln1(x)
-            x = x + attn(x, x, x)[0]  # Multi-head Self Attention
+            attn_output, _ = attn(x, x, x) # Multi-head Self Attention
+            x = x_res + attn_output
+
+            x_res_mlp = x
             x = ln2(x)
-            x = x + mlp(x)  # MLP block
+            x = x_res_mlp + mlp(x)  # MLP block
         
         # Classification
         x = self.norm(x)

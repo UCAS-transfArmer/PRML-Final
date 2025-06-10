@@ -16,3 +16,6 @@ data/
 wandb/*
 !wandb/config.yaml
 ckpts/
+.vscode
+.pytest_cache
+ckpts_finetune_debug
