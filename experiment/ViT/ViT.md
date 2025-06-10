@@ -1,6 +1,5 @@
 Vision Transformer (ViT) Summary and Experimental Plan
-
-贴上原论文链接：[《AN IMAGE IS WORTH 16X16 WORDS:  TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE》](：https://arxiv.org/pdf/2010.11929)
+贴上原论文链接：《AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE》
 1. Method
 1.1 输入
 1.1.1 图像输入
@@ -31,7 +30,7 @@ pretain 阶段的分类头是一个带隐藏层的 MLP；提供非线性能力�
 fine-tune 阶段是一个单一的线性层：参数少，成本低，防止过拟合
 
 
-即：(TransformerEncoder(z^0_L) = \boldsymbol{y})
+即：(\text{TransformerEncoder}(z^0_L) = \boldsymbol{y})
 
 1.1.4 Positional Embedding
 
@@ -39,10 +38,7 @@ fine-tune 阶段是一个单一的线性层：参数少，成本低，防止过�
 
 1.1.5 Transformer Encoder
 
-通过每一层的公式：
-
-[图片]  
-
+通过每一层的公式：[图片]  
 Inductive Bias (归纳偏见)：
 ViT 的弱归纳偏见：Transformer 依赖自注意力机制，几乎没有强加关于数据结构的先验假设。图像方面：ViT 将图像分割成 patch 并按序列处理，自注意力机制允许模型学习任意 patch 之间的关系，不假设局部性（locality）或平移不变性（translation invariance），较为灵活；缺点就是数据需求高：由于归纳偏见较弱，ViT 需要大量数据来学习图像的结构信息（如局部相关性），否则性能可能不如 CNN。
 CNNs 的强归纳偏见：
