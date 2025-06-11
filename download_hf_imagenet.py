@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from datasets import load_dataset, ClassLabel
+from datasets import load_dataset, ClassLabel, get_dataset_infos 
 from PIL import Image
 from tqdm import tqdm
 import logging
@@ -26,53 +26,96 @@ HF_CACHE_DIR = BASE_OUTPUT_DIR / "hf_cache"
 # NUM_SAMPLES_TO_TEST = 5 # 注释掉此行以进行完整下载
 # --- ---
 
-def save_image_split(dataset_split, target_dir: Path, class_names: list, split_name: str):
+def save_image_split(dataset_split, target_dir: Path, class_names: list, split_name: str, total_examples: int = None): # <--- 添加 total_examples 参数
     """
-    保存数据集的特定划分 (train/validation) 到目标目录。
+    保存数据集的特定划分 (train/validation) 到目标目录，支持断点续传。
 
     Args:
         dataset_split: Hugging Face 数据集的一个划分 (e.g., dataset['train']).
         target_dir: 保存该划分的根目录 (e.g., TRAIN_DIR).
         class_names: 类别名称列表 (synset IDs, e.g., ['n01440764', ...]).
         split_name: 划分的名称，用于日志和文件名 (e.g., "train").
+        total_examples: 该划分的总样本数，用于tqdm进度条 (可选).
     """
     logger.info(f"开始处理和保存 {split_name} 数据集...")
     target_dir.mkdir(parents=True, exist_ok=True)
 
-    # 为每个类别创建子文件夹
+    # num_existing_files_per_class 存储每个类别在之前运行中已保存的图片数量
+    num_existing_files_per_class = {}
+    logger.info(f"检查 '{target_dir}' 中已存在的 {split_name} 图片以支持断点续传...")
     for synset_id in class_names:
-        (target_dir / synset_id).mkdir(parents=True, exist_ok=True)
+        class_specific_dir = target_dir / synset_id
+        class_specific_dir.mkdir(parents=True, exist_ok=True) # 确保类别目录存在
+        
+        # 构造glob模式以匹配之前保存的文件
+        # 文件名格式: f"{split_name}_{synset_id}_{count:08d}.jpg"
+        try:
+            existing_files = list(class_specific_dir.glob(f"{split_name}_{synset_id}_*.jpg"))
+            num_existing_files_per_class[synset_id] = len(existing_files)
+            if num_existing_files_per_class[synset_id] > 0:
+                logger.info(f"  类别 {synset_id}: 发现 {num_existing_files_per_class[synset_id]} 张已存在的图片。将从之后继续。")
+        except Exception as e:
+            logger.warning(f"  检查类别 {synset_id} 的现有文件时出错: {e}. 假定为0张。")
+            num_existing_files_per_class[synset_id] = 0
 
-    # 记录每个类别已保存的图片数量，用于生成唯一文件名
-    image_counters = {synset_id: 0 for synset_id in class_names}
 
-    for i, example in enumerate(tqdm(dataset_split, desc=f"保存 {split_name} 图片")):
+    # current_class_example_seen_count 追踪当前运行中，从数据流中为每个类别看到的样本总数
+    current_class_example_seen_count = {synset_id: 0 for synset_id in class_names}
+    
+    new_files_saved_this_run = 0
+    skipped_files_this_run = 0
+
+    # 使用 total_examples 更新 tqdm 调用
+    for i, example in enumerate(tqdm(dataset_split, total=total_examples, desc=f"保存 {split_name} 图片", unit="img", dynamic_ncols=True)):
+        synset_id_for_example = "N/A" # 用于错误日志
         try:
             image = example['image']
             label_idx = example['label']
             
-            # 获取类别名称 (synset ID)
-            synset_id = class_names[label_idx]
+            synset_id_for_example = class_names[label_idx]
             
-            class_specific_dir = target_dir / synset_id
+            current_class_example_seen_count[synset_id_for_example] += 1
             
-            # 生成文件名
-            image_counters[synset_id] += 1
-            filename = f"{split_name}_{synset_id}_{image_counters[synset_id]:08d}.jpg"
+            # 如果当前类别遇到的样本的序号小于或等于该类别已存在的样本数，则跳过
+            # 这意味着这个样本在之前的运行中已经被处理过了
+            if current_class_example_seen_count[synset_id_for_example] <= num_existing_files_per_class.get(synset_id_for_example, 0):
+                skipped_files_this_run +=1
+                # 为了避免日志过于频繁，可以考虑减少这里的日志输出或只在特定条件下输出
+                if skipped_files_this_run % 10000 == 0 and skipped_files_this_run > 0:
+                     logger.debug(f"已跳过 {skipped_files_this_run} 张已存在的图片...")
+                continue # 跳过这个样本
+
+            # 保存新图片
+            class_specific_dir = target_dir / synset_id_for_example
+            
+            # 文件名中的计数器应该是当前类别遇到的总样本数 (因为我们已经跳过了等于 num_existing_files_per_class 的数量)
+            filename_idx = current_class_example_seen_count[synset_id_for_example]
+            filename = f"{split_name}_{synset_id_for_example}_{filename_idx:08d}.jpg"
             filepath = class_specific_dir / filename
             
-            # 确保图像是 RGB 格式 (ImageNet 主要是 JPEG)
             if image.mode != 'RGB':
                 image = image.convert('RGB')
             
             image.save(filepath, format="JPEG")
+            new_files_saved_this_run += 1
 
         except Exception as e:
-            logger.error(f"处理 {split_name} 数据时发生错误 (索引 {i}, 标签 {example.get('label', 'N/A')}): {e}")
-            logger.error(f"问题数据: {example}")
-            # 可以选择跳过有问题的图片或采取其他错误处理措施
+            logger.error(f"处理 {split_name} 数据时发生错误 (迭代索引 {i}, 标签 {example.get('label', 'N/A')}, synset {synset_id_for_example}): {e}")
+            # logger.error(f"问题数据: {example}") # 打印此项会非常冗长
 
-    logger.info(f"{split_name} 数据集保存完成。保存在: {target_dir}")
+    logger.info(f"{split_name} 数据集处理完成。")
+    if skipped_files_this_run > 0:
+        logger.info(f"  本轮跳过的已存在图片数量: {skipped_files_this_run}")
+    logger.info(f"  本轮新保存的图片数量: {new_files_saved_this_run}")
+    
+    total_files_in_split_after_run = 0
+    for synset_id_count in class_names:
+        class_specific_dir_count = target_dir / synset_id_count
+        try:
+            total_files_in_split_after_run += len(list(class_specific_dir_count.glob(f"{split_name}_{synset_id_count}_*.jpg")))
+        except Exception: # pragma: no cover
+            pass # 目录可能不存在等
+    logger.info(f"  '{target_dir}' 中该划分当前总图片数量: {total_files_in_split_after_run}")
 
 def main():
     # logger.info(f"开始下载和处理 ImageNet-1K 数据集 (测试模式：每个划分最多 {NUM_SAMPLES_TO_TEST} 个样本)...")
@@ -85,6 +128,44 @@ def main():
     TRAIN_DIR.mkdir(parents=True, exist_ok=True)
     VAL_DIR.mkdir(parents=True, exist_ok=True)
     HF_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    # --- 获取数据集总样本数以用于进度条 ---
+    train_total_examples = None
+    val_total_examples = None # This will store the count for 'validation' or 'val' if found
+    try:
+        logger.info(f"尝试获取 '{DATASET_NAME}' 数据集信息以显示进度条总数...")
+        all_configs_info = get_dataset_infos(DATASET_NAME) # e.g. "imagenet-1k"
+        
+        # 对于 'imagenet-1k', 配置名称通常是 'imagenet-1k' 本身
+        dataset_info = all_configs_info.get(DATASET_NAME) 
+
+        if dataset_info and dataset_info.splits:
+            if 'train' in dataset_info.splits:
+                train_total_examples = dataset_info.splits['train'].num_examples
+                if train_total_examples:
+                     logger.info(f"获取到训练集总样本数: {train_total_examples}")
+                else: # pragma: no cover
+                     logger.warning("训练集总样本数为 None 或 0。")
+            
+            # 对于验证集, 检查 'validation' 然后 'val'
+            if 'validation' in dataset_info.splits:
+                val_total_examples = dataset_info.splits['validation'].num_examples
+                if val_total_examples:
+                    logger.info(f"获取到 'validation' 划分总样本数: {val_total_examples}")
+                else: # pragma: no cover
+                    logger.warning("'validation' 划分总样本数为 None 或 0。")
+            elif 'val' in dataset_info.splits: # 'val' 作为备选
+                val_total_examples = dataset_info.splits['val'].num_examples
+                if val_total_examples:
+                    logger.info(f"获取到 'val' 划分总样本数: {val_total_examples}")
+                else: # pragma: no cover
+                    logger.warning("'val' 划分总样本数为 None 或 0。")
+        else: # pragma: no cover
+            logger.warning(f"未能从 get_dataset_infos 获取 '{DATASET_NAME}' 的详细信息。进度条可能不显示总数。")
+
+    except Exception as e: # pragma: no cover
+        logger.warning(f"获取数据集总样本数时出错: {e}。进度条可能不显示总数。")
+    # --- ---
 
     logger.info(f"正在从 Hugging Face Hub 加载 '{DATASET_NAME}' 数据集 (流式传输)...")
     logger.info("这可能需要很长时间，具体取决于你的网络和数据集大小。")
@@ -145,7 +226,7 @@ def main():
             else:
                 # train_subset = dataset_stream['train'].take(NUM_SAMPLES_TO_TEST) # 移除 .take()
                 train_subset = dataset_stream['train'] # 处理完整划分
-                save_image_split(train_subset, TRAIN_DIR, class_names, "train")
+                save_image_split(train_subset, TRAIN_DIR, class_names, "train", total_examples=train_total_examples) # <--- 传递 total_examples
         except Exception as e:
             logger.error(f"处理 'train' 划分的测试样本时出错: {e}")
     else:
@@ -171,7 +252,8 @@ def main():
             else:
                 # val_subset = val_split_to_process.take(NUM_SAMPLES_TO_TEST) # 移除 .take()
                 val_subset = val_split_to_process # 处理完整划分
-                save_image_split(val_subset, VAL_DIR, class_names, "validation") # 统一使用 "validation" 作为日志名
+                # 使用之前获取的 val_total_examples，它对应 'validation' 或 'val'
+                save_image_split(val_subset, VAL_DIR, class_names, "validation", total_examples=val_total_examples) # <--- 传递 total_examples
         except Exception as e:
             logger.error(f"处理 '{actual_val_split_name}' 划分的测试样本时出错: {e}")
     else:

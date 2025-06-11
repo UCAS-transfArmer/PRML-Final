@@ -8,6 +8,7 @@ import hashlib
 import math
 import datetime
 import time
+import re # Added for regex matching of checkpoint filenames
 
 def is_main_process():
     # Default: single GPU
@@ -77,7 +78,28 @@ def initialize(args, exp_name, project_name, config,model=None):
     # 添加学习率图表配置
     wandb.define_metric("train/learning_rate", summary="min")
     wandb.define_metric("train/learning_rate", summary="max")
-    wandb.define_metric("epoch")
+    # wandb.define_metric("epoch") # Removed: epoch will no longer be a primary step metric
+
+    # Define metrics for batch-level logging (primarily for train.py)
+    wandb.define_metric("global_step") # Ensure global_step is defined
+    wandb.define_metric("train/loss_batch", step_metric="global_step", summary="min")
+    wandb.define_metric("train/learning_rate_batch", step_metric="global_step")
+    wandb.define_metric("train/grad_norm", step_metric="global_step", summary="mean")
+
+    # Define metrics for pretrain.py batch-level logging
+    # wandb.define_metric("pretrain_step") # Removed: pretrain_step is replaced by global_step
+    wandb.define_metric("pretrain/iter_loss", step_metric="global_step", summary="min")
+    wandb.define_metric("pretrain/lr_batch", step_metric="global_step")
+    wandb.define_metric("pretrain/grad_norm", step_metric="global_step", summary="mean")
+    
+    # Define metrics for epoch-level logging (used by both train.py and pretrain.py via log_epoch_metrics)
+    # These will now use "global_step" as the step_metric.
+    wandb.define_metric("val/epoch_loss", step_metric="global_step", summary="min")
+    wandb.define_metric("val/epoch_top1_accuracy", step_metric="global_step", summary="max")
+    wandb.define_metric("val/epoch_top5_accuracy", step_metric="global_step", summary="max") 
+    wandb.define_metric("train/epoch_avg_loss", step_metric="global_step", summary="min")
+    wandb.define_metric("train/epoch_learning_rate", step_metric="global_step") 
+    wandb.define_metric("train/epoch_top1_accuracy", step_metric="global_step", summary="max") 
     
     if model is not None:
         wandb.watch(model, log="gradients", log_freq=100)
@@ -145,22 +167,22 @@ def log_training_batch(loss, current_lr, global_step, log_interval=100):
         })
 
 
-def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, val_acc_top5=None, train_top1_acc=None): # 修正这里，匹配之前的建议
+def log_epoch_metrics(epoch, train_loss, val_loss, val_acc, current_lr, global_step_val, val_acc_top5=None, train_top1_acc=None): # Added global_step_val
     """记录每个epoch的指标"""
     if is_main_process():
         metrics_to_log = {
-            "val/epoch_loss": val_loss, # 使用更明确的名称
+            "val/epoch_loss": val_loss, 
             "val/epoch_top1_accuracy": val_acc,
             "train/epoch_avg_loss": train_loss,
             "train/epoch_learning_rate": current_lr,
-            "epoch": epoch
+            "epoch": epoch # epoch is now logged as a metric, not as the x-axis step
         }
         if val_acc_top5 is not None:
             metrics_to_log["val/epoch_top5_accuracy"] = val_acc_top5
-        if train_top1_acc is not None: # 添加对 train_top1_acc 的记录
+        if train_top1_acc is not None: 
             metrics_to_log["train/epoch_top1_accuracy"] = train_top1_acc
         
-        log(metrics_to_log)
+        log(metrics_to_log, step=global_step_val) # Pass global_step_val as the step
 
 
 def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict, epoch, args,
@@ -179,7 +201,7 @@ def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict
     # 将 args (Tap 对象) 转换为可序列化的字典
     # 如果 args 是 Tap 对象，vars(args) 通常就足够了，因为它会返回其 __dict__
     # Tap 对象在设计上应该使其属性易于通过 vars() 获取
-    args_to_save = vars(args)
+    args_to_save = args.as_dict() # <--- 修改：使用 as_dict() 方法
 
     checkpoint = {
         'epoch': epoch,
@@ -209,6 +231,46 @@ def save_checkpoint(model_state_dict, optimizer_state_dict, scheduler_state_dict
         if wandb.run: # 检查 wandb.run 是否存在
             wandb.save(os.path.abspath(best_path), policy="live") # 使用 abspath 和 policy="live"
 
+    # --- Logic to keep only N checkpoints ---
+    if hasattr(args, 'keep_n_checkpoints') and args.keep_n_checkpoints is not None and args.keep_n_checkpoints > 0:
+        # This pattern is specific to pretrain.py's naming convention
+        # It matches "pretrain_ckpt_epoch_EPOCHNUMBER.pth" or "pretrain_ckpt_epoch_EPOCHNUMBER_best.pth"
+        checkpoint_pattern = re.compile(r"pretrain_ckpt_epoch_(\d+)(_best)?\.pth")
+        
+        candidate_files = []
+        try:
+            candidate_files = os.listdir(args.save_path)
+        except OSError as e:
+            print(f"Error listing directory {args.save_path} for checkpoint cleanup: {e}")
+            return # Stop cleanup if directory cannot be listed
+
+        epoch_checkpoints = []
+        for filename in candidate_files:
+            match = checkpoint_pattern.fullmatch(filename)
+            if match:
+                epoch_num = int(match.group(1))
+                epoch_checkpoints.append({
+                    'path': os.path.join(args.save_path, filename),
+                    'epoch': epoch_num,
+                    'filename': filename
+                })
+        
+        # Sort checkpoints by epoch number in ascending order (oldest first)
+        epoch_checkpoints.sort(key=lambda x: x['epoch'])
+        
+        # If the number of checkpoints exceeds keep_n_checkpoints, remove the oldest ones
+        if len(epoch_checkpoints) > args.keep_n_checkpoints:
+            num_to_delete = len(epoch_checkpoints) - args.keep_n_checkpoints
+            checkpoints_to_delete = epoch_checkpoints[:num_to_delete]
+            
+            for ckpt_info in checkpoints_to_delete:
+                # The file 'best_model.pth' and '..._interrupted.pth' are not matched by the regex,
+                # so they are naturally protected from this specific cleanup.
+                try:
+                    os.remove(ckpt_info['path'])
+                    print(f"Removed old checkpoint (keep_n_checkpoints): {ckpt_info['filename']}")
+                except OSError as e:
+                    print(f"Error removing old checkpoint {ckpt_info['filename']}: {e}")
 
 def finish():
     """结束wandb记录"""

@@ -14,7 +14,8 @@ from utils import wandb_utils
 from utils.scheduler import create_scheduler 
 from models import VisionTransformer 
 
-import torch.amp # Updated AMP import
+# import torch.amp # Updated AMP import - Commented out or remove if not used elsewhere
+from torch.cuda import amp # Use the old cuda.amp import
 
 # --- 可选：分布式训练 ---
 # import torch.distributed as dist
@@ -57,7 +58,7 @@ def evaluate_pretrain(model, dataloader, criterion, device, epoch_num=None, use_
         for inputs, labels in pbar:
             inputs, labels = inputs.to(device), labels.to(device)
             
-            with torch.amp.autocast(device_type=device.type, enabled=use_amp): # Updated AMP API
+            with amp.autocast(enabled=use_amp): # Old AMP API
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
             
@@ -159,32 +160,75 @@ def pretrain_imagenet(args):
     )
     # 确保 create_scheduler 能够处理 warmup_start_lr
     scheduler = create_scheduler(optimizer, args) # 假设 args 包含 warmup_start_lr, warmup_epochs, min_lr 等
-    scaler = torch.amp.GradScaler(enabled=use_amp) # Updated AMP API
+    
+    # --- GradScaler 初始化 (使用旧版 API) ---
+    scaler = amp.GradScaler(enabled=use_amp)
+    # --- GradScaler 初始化结束 ---
 
     # --- W&B 初始化 ---
     # 确保 wandb_utils.initialize 和 wandb_utils.log 等函数存在且功能正确
     if getattr(args, 'use_wandb', True): # 假设 args 中有 use_wandb 字段，默认为 True
         try:
-            wandb_utils.initialize(
-                args, # 传递整个 args 对象
-                exp_name=args.exp_name if args.exp_name else f"{args.model}_{args.dataset}_pretrain_debug_fake" if args.debug_use_fake_data else f"{args.model}_{args.dataset}_pretrain",
-                project_name=args.project_name,
-                model=model_unwrapped # watch 未包装的模型
-            )
-            print("WandB初始化成功。")
+                wandb_utils.initialize(
+                    args, # 传递整个 args 对象
+                    exp_name=args.exp_name if args.exp_name else f"{args.model}_{args.dataset}_pretrain_debug_fake" if args.debug_use_fake_data else f"{args.model}_{args.dataset}_pretrain",
+                    project_name=args.project_name,
+                    model=model_unwrapped, # watch 未包装的模型
+                    config=vars(args) # 
+                )
+                print("WandB初始化成功。")
         except Exception as e:
             print(f"WandB初始化失败: {e}。将禁用WandB。")
             args.use_wandb = False # 出错则禁用
     else:
         print("WandB被禁用。")
 
+    start_epoch = 0 # Initialize start_epoch
 
-    best_val_top1_acc = 0.0
+    # --- Load checkpoint if resume_checkpoint_path is provided ---
+    if args.resume_checkpoint_path and os.path.isfile(args.resume_checkpoint_path):
+        print(f"Resuming training from checkpoint: {args.resume_checkpoint_path}")
+        checkpoint = torch.load(args.resume_checkpoint_path, map_location=device)
+
+        # Restore model state
+        if isinstance(model, nn.DataParallel):
+            model.module.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            model.load_state_dict(checkpoint['model_state_dict'])
+        
+        # Restore optimizer and scheduler state
+        if 'optimizer_state_dict' in checkpoint:
+            optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        if 'scheduler_state_dict' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        
+        start_epoch = checkpoint.get('epoch', 0) 
+        global_step = checkpoint.get('global_step', 0)
+        best_val_top1_acc = checkpoint.get('best_val_top1_acc', 0.0)
+        
+        if use_amp and 'scaler_state' in checkpoint and checkpoint['scaler_state'] is not None:
+            scaler.load_state_dict(checkpoint['scaler_state'])
+        
+        print(f"Resumed from epoch {start_epoch}, global_step {global_step}, best_val_top1_acc {best_val_top1_acc:.2f}%")
+    elif args.resume_checkpoint_path:
+        print(f"Warning: resume_checkpoint_path ({args.resume_checkpoint_path}) was specified but not found. Starting training from scratch.")
+        global_step = 0
+        best_val_top1_acc = 0.0
+        start_epoch = 0
+    else:
+        print("No checkpoint specified, starting training from scratch.")
+        global_step = 0
+        best_val_top1_acc = 0.0
+        # start_epoch is already 0 by default
+    # --- End of checkpoint loading logic ---
+
+    # best_val_top1_acc = 0.0 # REMOVE or ensure it's only for non-resume case
     start_time = time.time()
     print(f"\n开始在 ImageNet 上预训练 {args.ep} 个 epochs...")
+    # global_step = 0 # REMOVE or ensure it's only for non-resume case
 
     try:
-        for epoch in range(args.ep):
+        for epoch in range(start_epoch, args.ep): # Modified loop to start from start_epoch
             model.train()
             running_loss_epoch = 0.0
             correct_train_epoch = 0
@@ -200,15 +244,29 @@ def pretrain_imagenet(args):
 
                 optimizer.zero_grad(set_to_none=True) # set_to_none=True 可以提高性能
 
-                with torch.amp.autocast(device_type=device.type, enabled=use_amp): # Updated AMP API
+                with amp.autocast(enabled=use_amp): # Old AMP API
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
                 
                 scaler.scale(loss).backward()
 
+                grad_norm_to_log = 0.0
+                if use_amp:
+                    scaler.unscale_(optimizer)
+                
+                # 计算梯度范数
                 if args.grad_clip_norm is not None and args.grad_clip_norm > 0:
-                    scaler.unscale_(optimizer) 
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=args.grad_clip_norm)
+                    grad_norm_tensor = torch.nn.utils.clip_grad_norm_(
+                        model.parameters(), max_norm=args.grad_clip_norm
+                    )
+                    grad_norm_to_log = grad_norm_tensor.item()
+                else:
+                    total_norm_sq = 0.0
+                    for p in model.parameters():
+                        if p.grad is not None:
+                            param_norm = p.grad.data.norm(2)
+                            total_norm_sq += param_norm.item() ** 2
+                    grad_norm_to_log = total_norm_sq**0.5 if total_norm_sq > 0 else 0.0
                 
                 scaler.step(optimizer)
                 scaler.update()
@@ -226,14 +284,17 @@ def pretrain_imagenet(args):
                 })
 
                 # WandB 日志记录迭代级别的信息
-                if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized() and (i+1) % args.log_per_iter == 0 :
+                if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized() and \
+                   (i+1) % args.log_per_iter == 0 :
                     iter_log_data = {
                         "pretrain/iter_loss": loss.item(),
-                        "pretrain/lr": current_lr,
-                        "pretrain/epoch_progress": epoch + (i+1)/len(trainloader), # 更精细的epoch进度
+                        "pretrain/lr_batch": current_lr, # 修改指标名称
+                        "pretrain/grad_norm": grad_norm_to_log # 添加梯度范数
                     }
-                    # 确保 wandb_utils.log 存在
-                    wandb_utils.log(iter_log_data) # 移除了 step 参数，让 wandb 自动处理或在 log_epoch_metrics 中统一处理
+                    wandb_utils.log(iter_log_data, step=global_step) # 使用 global_step
+                
+                # pretrain_step += 1 # 递增 pretrain_step -> 更名为 global_step
+                global_step += 1 # 递增 global_step
             
             pbar.close() # 确保关闭进度条
             avg_train_loss = running_loss_epoch / total_train_epoch if total_train_epoch > 0 else 0.0
@@ -259,9 +320,10 @@ def pretrain_imagenet(args):
                     avg_train_loss, 
                     val_loss, 
                     val_top1_acc, 
-                    optimizer.param_groups[0]['lr'], # 当前 epoch 结束时的学习率
+                    optimizer.param_groups[0]['lr'],
+                    global_step_val=global_step, # 传递当前的 global_step
                     val_acc_top5=val_top5_acc,
-                    train_acc_top1=avg_train_acc # 也记录训练集准确率
+                    train_top1_acc=avg_train_acc # 确保传递 train_top1_acc
                 )
 
             is_best = val_top1_acc > best_val_top1_acc
@@ -275,13 +337,17 @@ def pretrain_imagenet(args):
                 # 确保 wandb_utils.save_checkpoint 存在
                 wandb_utils.save_checkpoint(
                     state_to_save, 
-                    optimizer.state_dict(), # 传递 optimizer.state_dict()
-                    scheduler.state_dict(), # 传递 scheduler.state_dict()
-                    epoch + 1, 
+                    optimizer.state_dict(), 
+                    scheduler.state_dict(), 
+                    epoch + 1, # Save the completed epoch number
                     args, 
                     is_best=is_best,
                     checkpoint_name=f"pretrain_ckpt_epoch_{epoch+1}{'_best' if is_best else ''}.pth",
-                    extra_state={'scaler_state': scaler.state_dict()} if use_amp else None # 统一键名为 scaler_state
+                    extra_state={
+                        'scaler_state': scaler.state_dict() if use_amp else None,
+                        'global_step': global_step, # Save global_step
+                        'best_val_top1_acc': best_val_top1_acc # Save best_val_top1_acc
+                        }
                 )
             
             scheduler.step() # 在每个 epoch 后更新学习率 (如果调度器是按epoch更新的话)
@@ -292,13 +358,17 @@ def pretrain_imagenet(args):
             state_to_save = model.module.state_dict() if isinstance(model, nn.DataParallel) else model.state_dict()
             wandb_utils.save_checkpoint(
                 state_to_save, 
-                optimizer.state_dict(), # 传递 optimizer.state_dict()
-                scheduler.state_dict(), # 传递 scheduler.state_dict()
-                epoch + 1 if 'epoch' in locals() else 0, 
+                optimizer.state_dict(), 
+                scheduler.state_dict(), 
+                epoch + 1 if 'epoch' in locals() else start_epoch, # Use start_epoch if epoch is not defined
                 args, 
-                is_best=False, # 中断时不是最佳
+                is_best=False, 
                 checkpoint_name="pretrain_ckpt_interrupted.pth",
-                extra_state={'scaler_state': scaler.state_dict()} if use_amp else None # 统一键名为 scaler_state
+                extra_state={
+                    'scaler_state': scaler.state_dict() if use_amp else None,
+                    'global_step': global_step, # Save global_step
+                    'best_val_top1_acc': best_val_top1_acc # Save best_val_top1_acc
+                    }
             )
             print("已保存中断时的检查点。")
     finally:

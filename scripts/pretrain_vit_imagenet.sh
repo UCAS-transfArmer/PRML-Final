@@ -1,13 +1,14 @@
 #!/bin/bash
+export CUDA_VISIBLE_DEVICES=6,7,8,9
 
 echo "开始在ImageNet-1K上预训练ViT模型..."
 python pretrain.py \
     --model=vit \
     --dataset=imagenet \
     --data_root=./data \
-    --bs=512 \
+    --bs=832 \
     --ep=300 \
-    --lr=1e-3 \
+    --lr=8e-4 \
     --warmup_epochs=10 \
     --warmup_start_lr=1e-6 \
     --min_lr=1e-5 \
@@ -21,14 +22,14 @@ python pretrain.py \
     --enhanced_augmentation \
     --weight_decay=0.03 \
     --grad_clip_norm=1.0 \
-    --num_workers=16 \
+    --num_workers=24 \
     --project_name=PRML-Final \
-    --exp_name=vit-base16-imagenet-pretrain-bs512-original \
+    --exp_name=vit-base16-imagenet-pretrain-bs832-lr8e-4 \
     --save_path=./ckpts/imagenet \
-    --keep_n_checkpoints=2 \
-    --save_frequency=20 \
-    --log_per_iter=100 \
+    --keep_n_checkpoints=4 \
+    --save_frequency=10 \
+    --log_per_iter=50 \
     --use_data_parallel \
     --use_amp
-
+#--resume_checkpoint_path /path/to/your/checkpoint.pth
 echo "脚本执行完毕。"

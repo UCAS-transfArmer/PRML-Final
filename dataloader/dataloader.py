@@ -7,7 +7,7 @@ import os
 
 def get_cifar10_dataloader(
     batch_size=256, 
-    num_workers=4, 
+    num_workers=0, 
     data_root='./data', 
     for_vit=True,
     image_size=224,

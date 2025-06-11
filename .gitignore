@@ -1,4 +1,4 @@
-# Python-generated files
+PR# Python-generated files
 __pycache__/
 *.py[oc]
 build/
@@ -19,3 +19,6 @@ ckpts/
 .vscode
 .pytest_cache
 ckpts_finetune_debug
+config.yaml
+Country.mmdb
+.empty

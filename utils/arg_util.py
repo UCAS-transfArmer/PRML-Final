@@ -1,6 +1,7 @@
 from tap import Tap
 import torch
 import os
+from typing import Optional # Added Optional
 
 class Args(Tap):
     # Experiment specific arguments
@@ -34,7 +35,7 @@ class Args(Tap):
     min_lr: float = 1e-5
 
     # Data augmentation parameters
-    enhanced_augmentation: bool = True
+    enhanced_augmentation: bool = False
     crop_padding: int = 28 # For CIFAR-10 - this might need adjustment if only imagenet is primary
 
     # ImageNet subset specific arguments for debugging
@@ -50,7 +51,7 @@ class Args(Tap):
     save_frequency: int = 20
     log_per_iter: int = 100
     device: str = 'cuda'
-    use_data_parallel: bool = True # For multi-GPU training
+    use_data_parallel: bool =False # For multi-GPU training
 
     # --- Fine-tuning specific arguments ---
     pretrained_path: str = None # type: ignore
@@ -61,11 +62,15 @@ class Args(Tap):
     # Fine-tuning scripts should override this with a smaller value (e.g., 1e-4, 5e-5).
 
     # Mixed precision training
-    use_amp: bool = True
+    use_amp: bool = False
+    use_wandb: bool= True
 
     # Debugging
     debug_skip_real_data: bool = False #
     debug_use_fake_data: bool = False # 新增：用于从新工具文件加载伪造数据
+
+    # Resume training
+    resume_checkpoint_path: Optional[str] = None # Path to the checkpoint to resume from
 
     def process_args(self):
         """验证参数有效性"""
@@ -120,4 +125,3 @@ if __name__ == '__main__':
     # 使用 as_dict() 获取 Tap 对象的字典表示形式以进行迭代
     for arg_name, arg_val in args_tap.as_dict().items():
         print(f"  {arg_name}: {arg_val}")
-    
