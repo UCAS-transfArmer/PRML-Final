@@ -3,8 +3,7 @@
 
 贴上原论文链接：[《AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE》](https://arxiv.org/pdf/2010.11929)
 
-这是一个：
-[论文总结](https://acnn8hqx4j1r.feishu.cn/docx/JFdIdMfCJo26OrxhkoPcOOIOnah)
+这里放一个[论文总结](https://acnn8hqx4j1r.feishu.cn/docx/JFdIdMfCJo26OrxhkoPcOOIOnah)
 ## 做两部分实验：
 
 1.  用ViT在CIFAR-10（train+val共6万张，10类）上训练和验证：
@@ -15,7 +14,7 @@
         进度：val_acc 85%
 
 2.  用标准ViT-base/16在ImageNet-1K(train+val约128万张图片，1000类)，再在CIFAR-10上微调
-    进度：代码基本写完
+    进度：正在进行预训练
 
 ## 期望的实验结果:
 
