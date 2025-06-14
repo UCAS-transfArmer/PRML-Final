@@ -1,15 +1,15 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=6,7,8,9
+export CUDA_VISIBLE_DEVICES=0,1,2,3,6,7,8,9
 
 echo "开始在ImageNet-1K上预训练ViT模型..."
 python pretrain.py \
     --model=vit \
     --dataset=imagenet \
     --data_root=./data \
-    --bs=832 \
+    --bs=1600 \
     --ep=300 \
-    --lr=8e-4 \
-    --warmup_epochs=10 \
+    --lr=1.6e-3 \
+    --warmup_epochs=6 \
     --warmup_start_lr=1e-6 \
     --min_lr=1e-5 \
     --image_size=224 \
@@ -18,15 +18,15 @@ python pretrain.py \
     --depth=12 \
     --heads=12 \
     --mlp_dim=3072 \
-    --dropout=0.1 \
+    --dropout=0.0 \
     --enhanced_augmentation \
-    --weight_decay=0.03 \
+    --weight_decaykj0.05 \
     --grad_clip_norm=1.0 \
-    --num_workers=24 \
+    --num_workers=16 \
     --project_name=PRML-Final \
-    --exp_name=vit-base16-imagenet-pretrain-bs832-lr8e-4 \
+    --exp_name=vit-base16-imagenet-pretrain-bs1600-lr1.6e-3 \
     --save_path=./ckpts/imagenet \
-    --keep_n_checkpoints=4 \
+    --keep_n_checkpoints=3 \
     --save_frequency=10 \
     --log_per_iter=50 \
     --use_data_parallel \

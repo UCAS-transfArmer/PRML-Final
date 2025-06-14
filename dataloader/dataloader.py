@@ -107,8 +107,8 @@ def get_cifar10_dataloader(
 
 
 def get_imagenet_dataloader(
-    batch_size=256,  # 与 pretrain_vit_imagenet.sh 中的 --bs 对齐
-    num_workers=8,   # 与 pretrain_vit_imagenet.sh 中的 --num_workers 对齐
+    batch_size=832,  # 与 pretrain_vit_imagenet.sh 中的 --bs 对齐
+    num_workers=24,   # 与 pretrain_vit_imagenet.sh 中的 --num_workers 对齐
     data_root='./data/imagenet', # 这是 get_dataloader 传递过来的 imagenet_root
     for_vit=True,
     image_size=224,  # 与 pretrain_vit_imagenet.sh 中的 --image_size 对齐
@@ -240,7 +240,7 @@ def get_imagenet_dataloader(
 def get_dataloader(
     dataset_name, 
     batch_size, 
-    num_workers=4, 
+    num_workers=24, 
     data_root='./data', 
     for_vit=True, 
     enhanced_augmentation=False,

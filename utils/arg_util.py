@@ -49,7 +49,7 @@ class Args(Tap):
     save_path: str = './ckpts/imagenet'
     keep_n_checkpoints: int = 2
     save_frequency: int = 20
-    log_per_iter: int = 100
+    log_per_iter: int = 50
     device: str = 'cuda'
     use_data_parallel: bool =False # For multi-GPU training
 
