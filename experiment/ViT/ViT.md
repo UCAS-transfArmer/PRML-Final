@@ -2,7 +2,7 @@
 
 参考论文：[AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE](https://arxiv.org/pdf/2010.11929)
 
-论文解读参考：[论文总结](https://acnn8hqx4j1r.feishu.cn/docx/JFdIdMfCJo26OrxhkoPcOOIOnah)
+论文解读参考：[论文总结](https://acnn8hqx4j1r
 
 ## 实验设计与过程
 
@@ -59,4 +59,44 @@
 2.  **预训练的重要性**：大规模预训练是发挥 ViT 潜力的核心要素。通过在海量数据上学习，ViT 能够克服其结构本身缺乏的图像特有偏置。
 3.  **计算效率**：原论文指出，预训练后的 ViT 在达到与顶尖 CNNs 相近性能的同时，其训练所需的计算资源可以显著减少（尤其是在 JFT-300M 这样的大数据集上预训练时）。推理效率也具有竞争力。
 
-> 原文引用："When trained on the largest dataset (JFT-300M), ViT approaches or beats state-of-the-art on multiple image recognition benchmarks... However, when trained on smaller datasets such as ImageNet without strong regularization, these models yield modest accuracies of a few percentage points below ResNet."
+> 原文引用："When trained on the largest dataset (JFT-300M), ViT approaches or beats state-of-the-art on multiple image recognition benchmarks... However, when trained on smaller datasets such as ImageNet without strong regularization, these models yield modest accuracies of a few percentage points below ResNet。"
+
+## 实验超参数汇总
+
+### 超参数综合对比表
+
+### 跨实验通用超参数
+
+以下超参数在上述三个实验配置中均明确设置（或对于微调实验隐式继承并保持一致）且采用相同的值：
+
+| 参数名 (Argument)       | 通用值 (Common Value) | 描述 (Description)                                   |
+| :---------------------- | :-------------------- | :--------------------------------------------------- |
+| `model`                 | `vit`                 | 使用的模型架构                                         |
+| `image_size`             | `224`             | `224`                       | `224`                         | 输入图像尺寸 (pixels)                                  |
+| `patch_size`             | `16`                          | Patch 尺寸(pixels)                                    |
+| `dim`                    | `768`          | Transformer 维度 (embedding dimension)            |
+| `depth`                  | `12`           | Transformer 层数 (encoder blocks)                   |
+| `heads`                  | `12`           | 多头注意力机制的头数                                  |
+| `mlp_dim`                | `3072`        | MLP 内部隐藏层维度                                     |
+| `enhanced_augmentation` | `是`                  | 是否使用增强的数据增强策略                                 |
+| `num_workers`           | `16`                  | 数据加载使用的工作进程数                                 |
+| `use_data_parallel`     | `是`                  | 是否使用 `torch.nn.DataParallel` 进行多GPU训练          |
+| `use_amp`               | `是`                  | 是否使用自动混合精度 (Automatic Mixed Precision) 训练 |
+| `grad_clip_norm`         | `1.0`       | 梯度裁剪范数                                           |
+
+| 参数名 (Argument)        | 预训练 (ImageNet) | 微调 (CIFAR-10, 基于预训练) | 从零训练 (CIFAR-10, ViT-Base) | 描述 (Description)                                   |
+| :---------------------- | :---------------- | :-------------------------- | :---------------------------- | :--------------------------------------------------- |
+| `dataset`                | `imagenet`        | `cifar10`                   | `cifar10`                     | 使用的数据集                                           |
+| `bs` (batch_size)        | `1600`            | `512`                       | `512`                         | 批处理大小                                             |
+| `ep` (epochs)            | `300(实际130)`             | `60(实际20轮收敛)`                        | `200`                         | 训练轮次                                               |
+| `lr` (learning_rate)     | `1.6e-3`          | `2e-4`                      | `1e-4`                        | 基础学习率（最大学习率）                                           |
+| `warmup_epochs`          | `6`               | `3`                         | `10`                          | 学习率预热轮次数                                         |
+| `warmup_start_lr`        | `1e-6`            | `1e-6`                      | `1e-5`                        | 预热起始学习率                                           |
+| `min_lr`                 | `1e-5`            | `1e-6`                      | `1e-6`                        | 最小学习率 (学习率衰减下限)                               |
+| `dropout`                | `0.0`             | `0.1`                       | `0.1`                         | Dropout 概率                                         |
+| `enhanced_augmentation`  | `是`              | `是`                        | `是`                          | 是否使用增强的数据增强策略                                 |
+| `weight_decay`           | `0.05`            | `0.05`                      | `0.1`                         | 权重衰减系数                                           |
+| `head_lr_multiplier`     | -                 | `10`                        | -                             | 分类头学习率相对于骨干网络学习率的倍数                       |
+| `label_smoothing`        | -                 | `0.1`                       | -                             | 标签平滑系数                                             |
+| `crop_padding`           | -                 | `28`                        | `4`                           | 随机裁剪时的填充大小 (pixels)                                  |
+
