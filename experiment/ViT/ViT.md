@@ -2,7 +2,7 @@
 
 参考论文：[AN IMAGE IS WORTH 16X16 WORDS: TRANSFORMERS FOR IMAGE RECOGNITION AT SCALE](https://arxiv.org/pdf/2010.11929)
 
-论文解读参考：[论文总结](https://acnn8hqx4j1r
+论文解读参考：[论文总结](https://acnn8hqx4j1r.feishu.cn/docx/JFdIdMfCJo26OrxhkoPcOOIOnah)
 
 ## 实验设计与过程
 
