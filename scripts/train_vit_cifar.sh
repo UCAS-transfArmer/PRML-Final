@@ -33,4 +33,3 @@ python train.py \
     --use_amp
 
 echo "训练完成！"
-echo "WandB项目: PRML-Final"

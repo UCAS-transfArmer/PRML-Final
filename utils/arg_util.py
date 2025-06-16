@@ -1,7 +1,7 @@
 from tap import Tap
 import torch
 import os
-from typing import Optional # Added Optional
+from typing import Optional 
 
 class Args(Tap):
     # Experiment specific arguments

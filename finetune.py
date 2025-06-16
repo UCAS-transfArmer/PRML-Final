@@ -1,11 +1,11 @@
 import torch
-import torch.nn as nn # 确保导入 nn
+import torch.nn as nn 
 import torch.optim as optim
 import os
 import time
 import datetime
 from tqdm.auto import tqdm
-from argparse import Namespace # 确保 Namespace 被导入
+from argparse import Namespace 
 
 from utils.arg_util import get_args, Args # 复用arg_util
 from dataloader.dataloader import get_dataloader # 复用dataloader
@@ -24,7 +24,6 @@ def load_and_prepare_model(args, num_classes_finetune):
 
     checkpoint = torch.load(args.pretrained_path, map_location='cpu',weights_only=False)
     
-    #错误信息明确指出，从PyTorch2.6开始,torch.load函数的weights_only参数的默认值从 False 更改为了 True。
     #当 weights_only=True 时，torch.load 只会加载模型的权重（即 state_dict），并且出于安全考虑，它不允许反序列化（unpickle）任意的 Python 对象。
 
     if 'args' not in checkpoint:
@@ -44,15 +43,15 @@ def load_and_prepare_model(args, num_classes_finetune):
           f"patch_size={pretrained_model_args.patch_size}, dim={pretrained_model_args.dim}, etc.")
 
     model = VisionTransformer(
-        image_size=pretrained_model_args.image_size,        # 使用预训练时的 image_size
-        patch_size=pretrained_model_args.patch_size,        # 使用预训练时的 patch_size
+        image_size=pretrained_model_args.image_size,        
+        patch_size=pretrained_model_args.patch_size,        
         num_classes=num_classes_finetune,                   # 微调任务的类别数
         dim=pretrained_model_args.dim,
         depth=pretrained_model_args.depth,
         heads=pretrained_model_args.heads,
         mlp_dim=pretrained_model_args.mlp_dim,
-        dropout=args.dropout,                               # 使用微调时指定的dropout率
-        use_mlp_head=args.use_mlp_head                      # <--- 修改这行参数适应微调 use_mlp_head
+        dropout=args.dropout,                               
+        use_mlp_head=args.use_mlp_head                   
     )
 
     if 'model_state_dict' not in checkpoint:
@@ -85,7 +84,7 @@ def load_and_prepare_model(args, num_classes_finetune):
     else:
         print("  警告: 权重加载存在其他不匹配，请仔细检查。")
         
-    return model, pretrained_model_args # 返回预训练的args，因为 image_size 可能需要
+    return model, pretrained_model_args # 返回预训练的args
 
 # --- 2. 评估函数 ---
 def evaluate(model, dataloader, criterion, device, use_amp=False, epoch_num=None):
@@ -96,12 +95,12 @@ def evaluate(model, dataloader, criterion, device, use_amp=False, epoch_num=None
     total_samples = 0
     
     pbar_desc = f'Evaluating Epoch {epoch_num}' if epoch_num is not None else 'Evaluating'
-    pbar = tqdm(dataloader, desc=pbar_desc, leave=True, ncols=100)
+    pbar = tqdm(dataloader, desc=pbar_desc, leave=True, ncols=100, unit='batch') # 添加 unit='batch'
     
     with torch.no_grad():
         for inputs, labels in pbar:
             inputs, labels = inputs.to(device), labels.to(device)
-            with torch.amp.autocast(device_type=device.type, enabled=use_amp): # 更新AMP API
+            with torch.amp.autocast(device_type=device.type, enabled=use_amp): 
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
             
@@ -162,8 +161,6 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
         # 如果需要，这里可以强制 args.image_size = pretrained_args.image_size，并重新获取dataloader，
         # 但更好的做法是在 finetune_vit_cifar.sh 中就设置正确的 image_size，或者让 finetune.py 自动推断。
         # 当前 load_and_prepare_model 已经使用了 pretrained_args.image_size 构建模型。
-        # dataloader 也应该使用这个尺寸。
-
     model_unwrapped = model # 在DP包装前保留未包装模型的引用
     if args.use_data_parallel and torch.cuda.is_available() and torch.cuda.device_count() > 1:
         print(f"检测到 {torch.cuda.device_count()} 个 GPUs。启用 nn.DataParallel。")
@@ -185,7 +182,7 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
     
     optimizer_param_groups = []
     # 参数分组，为分类头设置不同的学习率
-    head_keywords = ['head', 'mlp_head'] # 确保这些与你的ViT模型定义中的分类头层名称匹配
+    head_keywords = ['head', 'mlp_head'] # 确保这些与ViT模型定义中的分类头层名称匹配
     
     # 冻结骨干网络
     if args.freeze_backbone:
@@ -211,14 +208,10 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
 
     optimizer = optim.AdamW(optimizer_param_groups, weight_decay=args.weight_decay)
     
-    # create_scheduler 需要知道基础学习率是 args.lr
-    # 调度器会根据 warmup_epochs 和 warmup_start_lr 调整初始学习率
-    # temp_scheduler_args_dict = vars(args).copy() # 旧代码
-    # temp_scheduler_args_dict['lr'] = args.lr    # 旧代码
-    # scheduler_args = Args(**temp_scheduler_args_dict) # 旧代码，导致错误
-    scheduler = create_scheduler(optimizer, args) # 修改：直接传递 args
+
+    scheduler = create_scheduler(optimizer, args) # 直接传递 args
     
-    scaler = torch.amp.GradScaler(enabled=use_amp) # 移除 device_type，它会自动推断
+    scaler = torch.amp.GradScaler(enabled=use_amp) 
 
     # --- W&B 初始化 ---
     if getattr(args, 'use_wandb', True): # 检查 use_wandb 属性
@@ -226,11 +219,11 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
         try:
             # 确保 wandb_utils.initialize 接受这些参数
             wandb_utils.initialize(
-                args=args,                       # 第一个参数：对应 initialize 中的 'args'
-                exp_name=run_name,               # 第二个参数：对应 initialize 中的 'exp_name'
-                project_name=args.project_name,  # 第三个参数：对应 initialize 中的 'project_name'
-                config=args,                     # 第四个参数：对应 initialize 中的 'config' (使用 finetune.py 中的 args 对象作为配置)
-                model=model_unwrapped            # 可选参数：对应 initialize 中的 'model'
+                args=args,                       
+                exp_name=run_name,              
+                project_name=args.project_name,  
+                config=args,                     
+                model=model_unwrapped            
             )
             print("WandB初始化成功。")
         except Exception as e:
@@ -285,7 +278,7 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
                             )
                             grad_norm_to_log_this_iter = grad_norm_val.item()
                         else:
-                            grad_norm_to_log_this_iter = 0.0 # 如果没有梯度（不太可能在训练中）
+                            grad_norm_to_log_this_iter = 0.0 
                     else:
                         # 如果没有梯度裁剪，手动计算范数
                         # 此时梯度已经反缩放（如果 use_amp 为 True）
@@ -312,8 +305,12 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
                 correct_train_epoch += (predicted == labels).sum().item()
                 
                 current_lrs_display = {pg.get('name', f'group{idx}'): f"{pg['lr']:.2e}" for idx, pg in enumerate(optimizer.param_groups)}
+                # 计算当前 epoch 的实时训练准确率
+                current_train_acc_display = f'{100.0 * correct_train_epoch / total_train_epoch:.2f}%' if total_train_epoch > 0 else '0.00%'
+                
                 pbar.set_postfix({
                     'loss': f'{loss.item():.4f}',
+                    'acc_epoch': current_train_acc_display, # 新增：显示当前epoch的累积准确率
                     **current_lrs_display
                 })
 
@@ -346,8 +343,8 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
                     train_loss=avg_train_loss, 
                     val_loss=val_loss, 
                     val_acc=val_acc, 
-                    current_lr=base_lr_epoch_end, # 修正: lr -> current_lr
-                    train_top1_acc=avg_train_acc, # 修正: train_acc -> train_top1_acc
+                    current_lr=base_lr_epoch_end, 
+                    train_top1_acc=avg_train_acc, 
                     global_step_val=global_step_val # <-- 添加缺失的参数
                 )
 
@@ -369,9 +366,9 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
 
                 # 确保 wandb_utils.save_checkpoint 能处理这些参数
                 wandb_utils.save_checkpoint(
-                    model_state_dict=model_state_to_save,       # 修改: model_state -> model_state_dict
-                    optimizer_state_dict=optimizer_state_to_save, # 修改: optimizer_state -> optimizer_state_dict
-                    scheduler_state_dict=scheduler_state_to_save, # 修改: scheduler_state -> scheduler_state_dict
+                    model_state_dict=model_state_to_save,       
+                    optimizer_state_dict=optimizer_state_to_save, 
+                    scheduler_state_dict=scheduler_state_to_save, 
                     epoch=epoch + 1,
                     args=args, # 传递 args
                     is_best=is_best,
@@ -394,9 +391,9 @@ def finetune_main(args: Args): # 明确 args 类型为 Args
                 current_extra_state_interrupted['scaler_state'] = scaler_state_to_save
 
             wandb_utils.save_checkpoint(
-                model_state_dict=model_state_to_save,        # 修改: model_state -> model_state_dict
-                optimizer_state_dict=optimizer_state_to_save,  # 修改: optimizer_state -> optimizer_state_dict
-                scheduler_state_dict=scheduler_state_to_save,  # 修改: scheduler_state -> scheduler_state_dict
+                model_state_dict=model_state_to_save,       
+                optimizer_state_dict=optimizer_state_to_save, 
+                scheduler_state_dict=scheduler_state_to_save,  
                 epoch=epoch + 1 if 'epoch' in locals() else 0, 
                 args=args, 
                 is_best=False,
@@ -421,19 +418,11 @@ if __name__ == '__main__':
     if not args_cmd.pretrained_path:
         raise ValueError("--pretrained_path 参数是必需的，用于指定预训练模型路径。")
 
-    # 可以在这里覆盖或设置一些微调特定的默认值（如果它们没有通过 .sh 脚本传递）
-    # 但更好的做法是在 .sh 脚本中明确设置所有重要的微调参数。
-    # 例如，确保微调时的学习率比预训练时小。
-    # args_cmd.lr = getattr(args_cmd, 'lr', 1e-4) # 示例：如果脚本没传lr，则设为1e-4
 
     print("使用以下配置运行微调:")
     for arg_name, value in sorted(vars(args_cmd).items()):
         print(f"  {arg_name}: {value}")
     print("-" * 30)
 
-    # 原先手动调用 Args.process_args() 的 try-except 代码块已被移除，
-    # 因为 get_args() 现在负责处理参数的完整解析和验证流程。
-    # 如果在 get_args() 内部（包括 tap 解析或 process_args 调用时）发生错误，
-    # 程序通常会直接退出并显示相关错误信息。
 
     finetune_main(args_cmd)

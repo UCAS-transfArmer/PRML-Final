@@ -1,5 +1,5 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+# export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 echo "开始在 CIFAR-10 数据集上微调 ViT 模型..."
 
@@ -32,6 +32,7 @@ python finetune.py \
     --enhanced_augmentation \
     --crop_padding=28 \
     --use_amp \
+    --freeze_backbone \
     --use_data_parallel
 
 echo "微调脚本执行完毕。"

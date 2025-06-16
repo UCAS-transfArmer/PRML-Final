@@ -37,7 +37,6 @@ class VisionTransformer(nn.Module):
         self.patch_embed = nn.Conv2d(3, dim, kernel_size=patch_size, stride=patch_size)
         self.pos_embed = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
-        # self.dropout = nn.Dropout(dropout) # Dropout 实例现在只在需要的地方创建
 
         # Transformer blocks
         self.transformer = nn.ModuleList([

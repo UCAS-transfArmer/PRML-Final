@@ -6,7 +6,7 @@ import time
 import datetime
 from tqdm import tqdm
 from torch.nn import DataParallel
-# --- 修改：使用旧版 AMP API ---
+
 from torch.cuda.amp import GradScaler, autocast 
 import wandb #
 
@@ -53,7 +53,7 @@ def get_model(model_name, num_classes, image_dims, args):
     return model
 
 
-def evaluate(model, dataloader, criterion, device, epoch_num=None, amp_enabled=False, device_type_for_amp='cuda'): # device_type_for_amp 在旧API中不再使用
+def evaluate(model, dataloader, criterion, device, epoch_num=None, amp_enabled=False, device_type_for_amp='cuda'): 
     model.eval()
     total_loss = 0.0
     correct_predictions = 0
@@ -91,7 +91,6 @@ def evaluate(model, dataloader, criterion, device, epoch_num=None, amp_enabled=F
     return avg_loss, accuracy
 
 
-
 def train(args):
     device = torch.device(args.device)
     
@@ -108,9 +107,8 @@ def train(args):
 
     # --- 修改：混合精度训练设置，使用旧版 API ---
     use_amp_arg = getattr(args, 'use_amp', True) 
-    amp_enabled = use_amp_arg and device.type == 'cuda' # AMP 主要用于 CUDA
+    amp_enabled = use_amp_arg and device.type == 'cuda' 
     
-    # GradScaler 初始化：使用旧版 API
     scaler = GradScaler(enabled=amp_enabled) 
 
     if amp_enabled:
@@ -208,9 +206,6 @@ def train(args):
                 
                 grad_norm_to_log = 0.0 # Initialize
 
-                # Unscale gradients first if AMP is enabled. This is crucial for both:
-                # 1. Getting the correct (unscaled) gradient norm for logging.
-                # 2. Ensuring clip_grad_norm_ (if used) operates on unscaled gradients.
                 if amp_enabled:
                     scaler.unscale_(optimizer) 
 
@@ -262,7 +257,7 @@ def train(args):
             print(f"- Learning Rate (end of epoch): {optimizer.param_groups[0]['lr']:.2e}")
             print(f"- Duration: {time.time() - epoch_start_time:.2f}s")
             
-            # evaluate 函数中的 device_type_for_amp 参数在旧 API 中不再需要，但保留它不会导致错误
+
             val_loss, val_acc = evaluate(model, testloader, criterion, device, epoch_num=epoch + 1, amp_enabled=amp_enabled) 
             
             if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized(): 
@@ -313,9 +308,7 @@ if __name__ == '__main__':
                 project_name=args.project_name,
                 config=vars(args), # 传递字典形式的配置
             )
-            print("WandB初始化成功。") # 修改提示信息
-            # 提示用户同步命令的 run_dir 通常在 wandb 初始化后可以从 wandb.run.dir 获取
-            # 但这里我们先通用提示
+            print("WandB初始化成功。") 
         except Exception as e:
             print(f"WandB初始化失败: {e}。将禁用WandB。")
             args.use_wandb = False # 确保在失败时禁用

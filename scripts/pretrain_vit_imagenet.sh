@@ -1,5 +1,5 @@
 #!/bin/bash
-export CUDA_VISIBLE_DEVICES=0,1,2,3,6,7,8,9
+# export CUDA_VISIBLE_DEVICES=0,1,2,3,6,7,8,9 若使用data_parallel则可手动指定GPU序号
 
 echo "开始在ImageNet-1K上预训练ViT模型..."
 python pretrain.py \
@@ -20,7 +20,7 @@ python pretrain.py \
     --mlp_dim=3072 \
     --dropout=0.0 \
     --enhanced_augmentation \
-    --weight_decaykj0.05 \
+    --weight_decay=0.05 \
     --grad_clip_norm=1.0 \
     --num_workers=16 \
     --project_name=PRML-Final \
@@ -31,5 +31,5 @@ python pretrain.py \
     --log_per_iter=50 \
     --use_data_parallel \
     --use_amp
-#--resume_checkpoint_path /path/to/your/checkpoint.pth
+#--resume_checkpoint_path /path/to/your/checkpoint.pth 训练中断支持从检查点续训
 echo "脚本执行完毕。"

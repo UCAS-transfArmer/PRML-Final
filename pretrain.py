@@ -14,7 +14,6 @@ from utils import wandb_utils
 from utils.scheduler import create_scheduler 
 from models import VisionTransformer 
 
-# import torch.amp # Updated AMP import - Commented out or remove if not used elsewhere
 from torch.cuda import amp # Use the old cuda.amp import
 
 # --- 可选：分布式训练 ---
