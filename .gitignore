@@ -22,3 +22,5 @@ ckpts_finetune_debug
 config.yaml
 Country.mmdb
 .empty
+cache.db
+debug_utils/*

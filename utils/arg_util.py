@@ -28,6 +28,7 @@ class Args(Tap):
     bs: int = 512
     lr: float = 3e-3          # Base learning rate (peak learning rate for the scheduler)
     weight_decay: float = 0.05 # Weight decay
+    label_smoothing: float = 0.0 # Label smoothing factor, 0.0 means no smoothing
 
     # Learning rate scheduler
     warmup_epochs: int = 5

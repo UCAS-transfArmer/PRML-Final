@@ -1,5 +1,5 @@
 import torch
-import torch.nn as nn
+import torch.nn as nn # 确保导入 nn
 import torch.optim as optim
 import os
 import time
@@ -123,7 +123,7 @@ def evaluate(model, dataloader, criterion, device, use_amp=False, epoch_num=None
     return avg_loss, accuracy
 
 # --- 3. 微调主函数 ---
-def finetune_main(args):
+def finetune_main(args: Args): # 明确 args 类型为 Args
     """微调模型的主函数"""
     device = torch.device(args.device)
     print(f"\\n设备配置: 实际使用 {device}")
@@ -175,8 +175,15 @@ def finetune_main(args):
     print(f"模型参数量 (微调, 可训练): {sum(p.numel() for p in model.parameters() if p.requires_grad):,}")
 
     # --- 损失函数、优化器、调度器 ---
-    criterion = nn.CrossEntropyLoss()
-
+    # 损失函数
+    if args.label_smoothing > 0.0:
+        criterion = nn.CrossEntropyLoss(label_smoothing=args.label_smoothing)
+        print(f"使用标签平滑，因子: {args.label_smoothing}")
+    else:
+        criterion = nn.CrossEntropyLoss()
+        print("未使用标签平滑。")
+    
+    optimizer_param_groups = []
     # 参数分组，为分类头设置不同的学习率
     head_keywords = ['head', 'mlp_head'] # 确保这些与你的ViT模型定义中的分类头层名称匹配
     
@@ -191,7 +198,6 @@ def finetune_main(args):
     base_params = [p for name, p in model_unwrapped.named_parameters() if not any(keyword in name for keyword in head_keywords) and p.requires_grad]
     head_params = [p for name, p in model_unwrapped.named_parameters() if any(keyword in name for keyword in head_keywords) and p.requires_grad]
 
-    optimizer_param_groups = []
     if base_params:
         optimizer_param_groups.append({'params': base_params, 'lr': args.lr, 'name': 'backbone'}) # 初始LR设为目标LR
         print(f"骨干网络参数组: {len(base_params)} tensors, 初始LR: {args.lr}")
@@ -332,6 +338,8 @@ def finetune_main(args):
 
             if getattr(args, 'use_wandb', False) and wandb_utils.is_initialized():
                 base_lr_epoch_end = optimizer.param_groups[0]['lr'] if optimizer.param_groups else 0
+                # 计算 global_step
+                global_step_val = (epoch + 1) * len(trainloader)
                 # 确保 wandb_utils.log_epoch_metrics 接受这些参数
                 wandb_utils.log_epoch_metrics(
                     epoch=epoch + 1, 
@@ -339,7 +347,8 @@ def finetune_main(args):
                     val_loss=val_loss, 
                     val_acc=val_acc, 
                     current_lr=base_lr_epoch_end, # 修正: lr -> current_lr
-                    train_top1_acc=avg_train_acc # 修正: train_acc -> train_top1_acc
+                    train_top1_acc=avg_train_acc, # 修正: train_acc -> train_top1_acc
+                    global_step_val=global_step_val # <-- 添加缺失的参数
                 )
 
             is_best = val_acc > best_val_acc
