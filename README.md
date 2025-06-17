@@ -1,8 +1,8 @@
 # PRML Final Homework
 
-`uv` is recommended to manage the virtual environment.
+[Report Link](https://github.com/UCAS-transfArmer/PRML-Final/blob/main/report.pdf)
 
-# Example
+# Training Instructions
 To train using logistic regression on the CIFAR-10 dataset, run the following command:
 
 ```bash
