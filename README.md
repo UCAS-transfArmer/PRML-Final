@@ -15,6 +15,12 @@ To train using AdaBoost regression on the CIFAR-10 dataset, run the following co
 python train.py --dataset=cifar10 --model=boosting --bs=1024 --ep=50 --tblr=1e-5 --save_path=./ckpts
 ```
 
+To train ResNet on the CIFAR-10 dataset, run the following script:
+
+```bash
+./scripts/train_resnet.sh
+```
+
 To run the ViT-model codes, you can run the following command to switch to the 'ViT-Specific' branch:
 ```bash
 git checkout ViT-Specific
@@ -40,5 +46,5 @@ chmod +x ./scripts/finetune_vit_cifar.sh
 ./scripts/finetune_vit_cifar.sh
 ```
 
-# Logging Example
+# Logging
 `wandb` is highly recommended for logging. If you haven't used it yet, you can sign up a account and refer to the `wandb`  [documentation](https://docs.wandb.ai/quickstart/) for more details.
